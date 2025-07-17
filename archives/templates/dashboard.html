@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% block content %}
+<h3>Мои архивы</h3>
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>Код</th>
+            <th>Описание</th>
+            <th>Скачиваний</th>
+            <th>Истекает</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for a in archives %}
+        <tr>
+            <td>{{ a.short_code }}</td>
+            <td>{{ a.description }}</td>
+            <td>{{ a.download_count }}</td>
+            <td>{{ a.expires_at|date:"Y-m-d H:i" }}</td>
+            <td><a href="/stats/{{ a.short_code }}/">Статистика</a></td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5">Нет архивов</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

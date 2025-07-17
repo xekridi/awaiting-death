@@ -1,0 +1,59 @@
+[project]
+name = "default"
+version = "0.1.0"
+description = "xekri"
+authors = [
+    {name = "Timofeev Daniil",email = "abc123454321abc@inbox.ru"}
+]
+readme = "README.md"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "django>=5.2.4,<6.0",
+    "djangorestframework>=3.16.0,<4.0",
+    "celery>=5.5.3,<6.0",
+    "redis>=6.2.0,<7.0",
+    "qrcode>=8.2,<9.0",
+    "pillow>=11.3.0,<12.0.0",
+    "gunicorn>=23.0.0,<24.0.0",
+    "whitenoise (>=6.9.0,<7.0.0)",
+    "selenium (>=4.34.2,<5.0.0)",
+    "webdriver-manager (>=4.0.2,<5.0.0)",
+]
+
+
+[tool.poetry]
+package-mode = false
+
+[tool.pyrefly]
+venvPath = "."
+venv = "/home/xekri/.cache/pypoetry/virtualenvs/default-4vFeTrfW-py3.12"
+extraPaths = ["./archives", "./config", "./core"]
+
+[tool.pyrefly.diagnostics]
+reportInconsistentOverride = "none"
+reportAttributeAccessIssue = "none"
+reportOperatorIssue        = "none"
+reportGeneralTypeIssues    = "none"
+
+ignore = [
+  "archives.migrations.*",
+]
+
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.1"
+pytest-django = "^4.11.1"
+black = "^25.1.0"
+isort = "^6.0.1"
+pyrefly = "^0.24.2"
+django-stubs = "^5.2.2"
+djangorestframework-stubs = "^3.16.1"
+celery-types = "^0.23.0"
+
+
+

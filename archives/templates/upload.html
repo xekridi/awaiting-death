@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h3>Загрузить архив</h3>
+
+<form method="post" enctype="multipart/form-data" class="vstack gap-3">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    {{ form.as_p }} {# включает: description, files, password*, max_downloads, expires_at #}
+
+    <button class="btn btn-primary" type="submit">Собрать ZIP</button>
+</form>
+{% endblock %}

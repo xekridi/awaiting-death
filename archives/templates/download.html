@@ -1,0 +1,7 @@
+{% extends "base.html" %}{% block content %}
+<h3>Скачать {{ archive.description|default:archive.short_code }}</h3>
+<form method="post" class="vstack gap-3">{% csrf_token %}{{ form.as_p }}
+    <button class="btn btn-success" type="submit">Скачать</button>
+</form>
+<p class="text-muted">Осталось скачиваний: {{ archive.max_downloads|default:"∞" }}</p>
+{% endblock %}

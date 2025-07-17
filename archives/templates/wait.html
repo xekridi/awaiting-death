@@ -1,0 +1,12 @@
+{# archives/templates/wait.html #}
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div id="msg">Ваш архив собирается…</div>
+<script>
+    const progressUrl = "{% url 'wait-progress' code=code %}";
+    const downloadUrl = "{% url 'download' code=code %}";
+</script>
+<script src="{% static 'archives/js/wait.js' %}"></script>
+{% endblock %}

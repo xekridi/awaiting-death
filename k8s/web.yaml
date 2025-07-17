@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: web }
+spec:
+  selector: { matchLabels: { app: web } }
+  replicas: 1
+  template:
+    metadata: { labels: { app: web } }
+    spec:
+      containers:
+      - name: web
+        image: default:latest
+        envFrom:
+        - configMapRef: { name: web-config }
+        - secretRef:    { name: db-secret }
+        ports: [{ containerPort: 8000 }]
+        volumeMounts:
+        - name: media
+          mountPath: /vol/web/media
+        - name: static
+          mountPath: /vol/web/static
+      volumes:
+      - name: media
+        emptyDir: {}
+      - name: static
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata: { name: web }
+spec:
+  selector: { app: web }
+  type: NodePort
+  ports: [{ port: 8000, nodePort: 30080 }]

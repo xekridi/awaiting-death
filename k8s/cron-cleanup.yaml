@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cleanup-expired-archives
+spec:
+  schedule: "*/30 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: cleanup
+              image: zipshare:latest
+              command: ["celery", "-A", "config.celery",
+                        "call", "archives.tasks.cleanup_expired_archives"]
+              envFrom:
+                - configMapRef:
+                    name: zipshare-env
