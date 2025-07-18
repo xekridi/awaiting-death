@@ -29,7 +29,7 @@ class DownloadFlowSeleniumTest(StaticLiveServerTestCase):
         cls.driver.quit()
         super().tearDownClass()
 
-    '''def test_download_with_limit_and_password(self):
+'''    def test_download_with_limit_and_password(self):
         driver = self.driver
         wait = WebDriverWait(driver, 10)
 

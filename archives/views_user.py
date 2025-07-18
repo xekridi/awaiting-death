@@ -160,14 +160,38 @@ class StatsPageView(DetailView):
 @login_required
 def wait_progress(request, code):
     arch = get_object_or_404(Archive, short_code=code, owner=request.user)
-    if arch.ready:
-        return JsonResponse({"status": "ready"})
+
+    if arch.ready and arch.zip_file:
+        return JsonResponse(
+            {"state": "SUCCESS", "pct": 100, "url": arch.get_download_url()}
+        )
+
     if arch.error:
-        return JsonResponse({"status": "error", "message": arch.error})
-    if arch.build_task_id:
-        res = AsyncResult(arch.build_task_id)
-        if res.failed():
-            info = res.info
-            message = info.get("exc") if isinstance(info, dict) and "exc" in info else str(info)
-            return JsonResponse({"status": "error", "message": message})
-    return JsonResponse({"status": "working"})
+        return JsonResponse({"state": "FAILURE", "pct": 0, "message": arch.error})
+
+    if not arch.build_task_id:
+        return JsonResponse({"state": "PENDING", "pct": 0})
+
+    res = AsyncResult(arch.build_task_id)
+
+    if res.failed():
+        info = res.info or {}
+        message = (
+            info.get("exc") if isinstance(info, dict) and "exc" in info else str(info)
+        )
+        return JsonResponse({"state": "FAILURE", "pct": 0, "message": message})
+
+    meta = res.info or {}
+    pct = meta.get("pct", 0)
+
+    if res.state == "SUCCESS":
+
+        if not arch.ready:
+            arch.ready = True
+            arch.save(update_fields=["ready"])
+        return JsonResponse(
+            {"state": "SUCCESS", "pct": 100, "url": arch.get_download_url()}
+        )
+
+    return JsonResponse({"state": res.state, "pct": pct})
+

@@ -21,6 +21,9 @@ class Archive(models.Model):
     description = models.CharField(max_length=255, blank=True)
     error = models.TextField(null=True, blank=True)
     build_task_id = models.CharField(max_length=50, null=True, blank=True)
+    idempotency_key = models.UUIDField(
+        default=uuid.uuid4, editable=False, unique=True
+    )
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True, blank=True,

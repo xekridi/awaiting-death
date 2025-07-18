@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.urls import path, include
 from django.http import HttpResponse
 from archives.views import download_archive
-from archives.views_user import SignupView, CustomLogoutView
+from archives.views_user import SignupView, CustomLogoutView, wait_progress
+
 
 
 def health(request):
@@ -17,4 +18,5 @@ urlpatterns = [
     path("accounts/logout/", CustomLogoutView.as_view(), name="logout"),
     path("accounts/", include("django.contrib.auth.urls")),
     path("", include("archives.urls_user")),
+    path("wait/<str:code>/progress/", wait_progress, name="wait-progress"),
 ]

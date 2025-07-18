@@ -165,6 +165,23 @@ zookeeper = ["kazoo (>=1.3.1)"]
 zstd = ["zstandard (==0.23.0)"]
 
 [[package]]
+name = "celery-progress"
+version = "0.5"
+description = "Drop in, configurable, dependency-free progress bars for your Django/Celery applications."
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "celery_progress-0.5-py3-none-any.whl", hash = "sha256:a02aaacc9dc8b97d975f3186ba2de08a8afef00457dadc3832b463b06b5316fa"},
+    {file = "celery_progress-0.5.tar.gz", hash = "sha256:ca345b8c86c35f6deb32a4b0df9a984f3f5aa9248a152eace9e04363367e848a"},
+]
+
+[package.extras]
+rabbitmq = ["channels_rabbitmq"]
+redis = ["channels_redis"]
+websockets = ["channels"]
+
+[[package]]
 name = "celery-types"
 version = "0.23.0"
 description = "Type stubs for Celery and its related packages"
@@ -1353,4 +1370,4 @@ h11 = ">=0.9.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4.0"
-content-hash = "bdbf7f95442caacea03c25a347b882b106439735fdf5152067227e1d663c74ed"
+content-hash = "ba056346ed9c16681405f02dfe21b3d40b40d0139d6552f6b1bd6816cc0ec5d0"

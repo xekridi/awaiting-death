@@ -3,10 +3,40 @@
 {% load static %}
 
 {% block content %}
-<div id="msg">Ваш архив собирается…</div>
+<div class="max-w-md mx-auto mt-10 text-center">
+    <h1 class="text-xl font-semibold mb-4">Сборка архива</h1>
+
+    <progress id="bar" value="0" max="100" class="w-full h-4"></progress>
+    <p id="percent" class="mt-2 text-sm text-gray-600">0&nbsp;%</p>
+
+    <div id="error" class="hidden text-red-600 mt-4"></div>
+</div>
+
 <script>
     const progressUrl = "{% url 'wait-progress' code=code %}";
-    const downloadUrl = "{% url 'download' code=code %}";
+
+    async function poll() {
+        const res = await fetch(progressUrl, { cache: "no-store" });
+        const data = await res.json();
+        const bar = document.getElementById("bar");
+        const pctEl = document.getElementById("percent");
+        const errEl = document.getElementById("error");
+
+        if (data.state === "SUCCESS") {
+            location.href = data.url;
+            return;
+        }
+        if (data.state === "FAILURE") {
+            errEl.textContent = data.message || "Ошибка сборки архива";
+            errEl.classList.remove("hidden");
+            return;
+        }
+        const pct = data.pct || 0;
+        bar.value = pct;
+        pctEl.textContent = pct + " %";
+        setTimeout(poll, 1200);
+    }
+
+    poll();
 </script>
-<script src="{% static 'archives/js/wait.js' %}"></script>
 {% endblock %}

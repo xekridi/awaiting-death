@@ -1,27 +1,38 @@
 import os
-from django.conf import settings
 import pytest
+from pathlib import Path
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils import timezone
 
 from archives.models import Archive, FileItem
 from archives.tasks import build_zip
 
+
 @pytest.mark.django_db
 def test_build_zip_idempotent(tmp_path, settings):
-    settings.MEDIA_ROOT = str(tmp_path)
+    settings.MEDIA_ROOT = tmp_path
+    settings.DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 
-    arch = Archive.objects.create(short_code="XX", ready=False)
-    fpath = tmp_path / "file.txt"
-    fpath.write_text("x")
-    FileItem.objects.create(archive=arch, file=str(fpath.relative_to(tmp_path)))
+    arch = Archive.objects.create(
+        short_code="XX",
+        ready=False,
+        expires_at=timezone.now() + timezone.timedelta(days=1),
+    )
+    file_obj = SimpleUploadedFile("file.txt", b"x")
+    FileItem.objects.create(archive=arch, file=file_obj)
 
-    build_zip.run(build_zip, arch.pk)
+    res1 = build_zip.apply(args=[arch.pk]).get()
     arch.refresh_from_db()
-    assert arch.ready
+    assert arch.ready is True
+    assert res1.endswith(".zip")
 
-    zip_path = tmp_path / arch.zip_file.name
-    mtime1 = os.path.getmtime(str(zip_path))
+    zip_path = Path(tmp_path) / res1
+    assert zip_path.exists()
+    mtime1 = zip_path.stat().st_mtime
 
-    build_zip.run(build_zip, arch.pk)
-    mtime2 = os.path.getmtime(str(zip_path))
+    res2 = build_zip.apply(args=[arch.pk]).get()
+    mtime2 = zip_path.stat().st_mtime
 
+    assert res1 == res2
     assert mtime1 == mtime2
