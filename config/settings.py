@@ -12,13 +12,17 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import sys
 import os
+import environ
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+env = environ.Env()
+environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-s&@abb@&-6!1_s9dlf34_a(j#dw9w-qjb-27nc8lri%4fsik8j"
+SECRET_KEY = env("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -109,6 +113,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Celery settings
 CELERY_BROKER_URL = "redis://redis:6379/0"
 CELERY_RESULT_BACKEND = "redis://redis:6379/1"
 CELERY_ACCEPT_CONTENT = ["json"]
