@@ -17,7 +17,13 @@ from config.celery import app
 logger = logging.getLogger(__name__)
 
 
-@app.task(bind=True, autoretry_for=(Exception,), max_retries=3, retry_backoff=True, retry_backoff_max=600)
+@app.task(
+    bind=True,
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=600,
+)
 def build_zip(self, archive_id):
     arch = Archive.objects.select_for_update().get(pk=archive_id)
 
@@ -35,32 +41,31 @@ def build_zip(self, archive_id):
 
     files_qs = FileItem.objects.filter(archive=arch)
     total = files_qs.count() or 1
-
     self.update_state(state="PROGRESS", meta={"pct": 5})
 
-    with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        for idx, item in enumerate(files_qs, start=1):
-            zf.write(item.file.path, item.file.name)
-            pct = 5 + int(idx * 85 / total)
-            self.update_state(state="PROGRESS", meta={"pct": pct})
+    try:
+        with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for idx, item in enumerate(files_qs, start=1):
+                zf.write(item.file.path, item.file.name)
+                pct = 5 + int(idx * 85 / total)
+                self.update_state(state="PROGRESS", meta={"pct": pct})
 
-    with open(tmp_path, "rb") as fp:
-        arch.zip_file.save(f"zips/{zip_name}", File(fp))
+        with open(tmp_path, "rb") as fp:
+            arch.zip_file.save(f"zips/{zip_name}", File(fp))
 
-    arch.ready = True
-    arch.error = None
-    arch.save(update_fields=["zip_file", "ready", "error"])
+        arch.ready = True
+        arch.error = None
+        arch.save(update_fields=["zip_file", "ready", "error"])
 
-    self.update_state(state=states.SUCCESS, meta={"pct": 100})
-    return arch.zip_file.name
+        self.update_state(state=states.SUCCESS, meta={"pct": 100})
+        return arch.zip_file.name
 
-
-@build_zip.on_failure
-def build_zip_failed(exc, task_id, args, kwargs, einfo):
-    archive_id = args[0] if args else kwargs.get("archive_id")
-    logger.exception("build_zip failed for %s", archive_id)
-    Archive.objects.filter(pk=archive_id).update(error=str(exc))
-    raise Ignore()
+    except Exception as exc:
+        logger.exception("build_zip failed for archive %s", archive_id)
+        arch.error = str(exc)
+        arch.save(update_fields=["error"])
+        self.update_state(state=states.FAILURE, meta={"exc": str(exc)})
+        raise Ignore()
 
 
 @app.task(bind=True)

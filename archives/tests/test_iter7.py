@@ -48,18 +48,26 @@ class TestUIAndAccounts:
     def test_upload_and_wait(self, client):
         url = reverse('upload')
         testfile = SimpleUploadedFile('f.txt', b'hello world')
-        response = client.post(url, {
-            'description': 'Desc',
-            'files': testfile,
-            'password1': '',
-            'password2': '',
-        }, format='multipart', follow=False)
+        response = client.post(
+            url,
+            {
+                'description': 'Desc',
+                'files': testfile,
+                'password1': '',
+                'password2': '',
+            },
+            format='multipart',
+            follow=False,
+        )
         assert response.status_code == 302
         wait_url = response['Location']
         assert '/wait/' in wait_url
         response = client.get(wait_url)
         assert response.status_code == 200
-        assert 'Ваш архив собирается' in response.content.decode()
+
+        content = response.content.decode('utf-8')
+        assert 'const progressUrl' in content
+
 
     def test_download_view(self, client, settings, tmp_path):
         user = User.objects.create_user('u', 'u@example.com', 'pw')

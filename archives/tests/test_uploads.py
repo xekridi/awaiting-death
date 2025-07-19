@@ -1,7 +1,6 @@
 import pytest
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from celery.result import AsyncResult
 from archives.models import Archive
 
 User = get_user_model()
@@ -15,76 +14,100 @@ def client_logged_in(client, user):
     client.force_login(user)
     return client
 
-def test_wait_progress_redirects_if_not_authenticated(client):
-    url = reverse("wait-progress", args=["nope"])
-    response = client.get(url)
-    assert response.status_code == 302
-    assert "/accounts/login/" in response["Location"]
+@pytest.mark.django_db
+class TestWaitProgress:
+    def test_wait_progress_redirects_if_not_authenticated(self, client):
+        url = reverse("wait-progress", args=["nope"])
+        response = client.get(url)
+        assert response.status_code == 302
+        assert "/accounts/login/" in response["Location"]
 
-def test_wait_progress_404_for_wrong_owner(client_logged_in, user):
-    other = User.objects.create_user(username="other", password="p")
-    arch = Archive.objects.create(
-        short_code="abc", owner=other, ready=False
-    )
-    url = reverse("wait-progress", args=[arch.short_code])
-    response = client_logged_in.get(url)
-    assert response.status_code == 404
+    def test_wait_progress_404_for_wrong_owner(self, client_logged_in, user):
+        other = User.objects.create_user(username="other", password="p")
+        arch = Archive.objects.create(
+            short_code="abc", owner=other, ready=False
+        )
+        url = reverse("wait-progress", args=[arch.short_code])
+        response = client_logged_in.get(url)
+        assert response.status_code == 404
 
-def test_wait_progress_returns_working_if_no_task_and_no_error(client_logged_in, user):
-    arch = Archive.objects.create(
-        short_code="wrk", owner=user, ready=False, error=None, build_task_id=None
-    )
-    url = reverse("wait-progress", args=[arch.short_code])
-    response = client_logged_in.get(url)
-    assert response.status_code == 200
-    assert response.json() == {"status": "working"}
+    def test_wait_progress_returns_working_if_no_task_and_no_error(self, client_logged_in, user):
+        arch = Archive.objects.create(
+            short_code="wrk", owner=user, ready=False, error=None, build_task_id=None
+        )
+        url = reverse("wait-progress", args=[arch.short_code])
+        resp = client_logged_in.get(url)
+        assert resp.status_code == 200
+        assert resp.json() == {"state": "PENDING", "pct": 0}
 
-def test_wait_progress_returns_ready_if_ready_flag_true(client_logged_in, user):
-    arch = Archive.objects.create(
-        short_code="rdy", owner=user, ready=True, error=None
-    )
-    url = reverse("wait-progress", args=[arch.short_code])
-    response = client_logged_in.get(url)
-    assert response.status_code == 200
-    assert response.json() == {"status": "ready"}
+    def test_wait_progress_returns_ready_if_ready_flag_true(self, client_logged_in, user):
+        arch = Archive.objects.create(
+            short_code="rdy", owner=user, ready=True, error=None
+        )
+        url = reverse("wait-progress", args=[arch.short_code])
+        resp = client_logged_in.get(url)
+        assert resp.status_code == 200
+        assert resp.json() == {
+            "state": "SUCCESS",
+            "pct": 100,
+            "url": arch.get_download_url(),
+        }
 
-def test_wait_progress_returns_error_if_model_error_set(client_logged_in, user):
-    arch = Archive.objects.create(
-        short_code="errm", owner=user, ready=False, error="boom!"
-    )
-    url = reverse("wait-progress", args=[arch.short_code])
-    response = client_logged_in.get(url)
-    assert response.status_code == 200
-    assert response.json() == {"status": "error", "message": "boom!"}
+    def test_wait_progress_returns_error_if_model_error_set(self, client_logged_in, user):
+        arch = Archive.objects.create(
+            short_code="errm", owner=user, ready=False, error="boom!"
+        )
+        url = reverse("wait-progress", args=[arch.short_code])
+        resp = client_logged_in.get(url)
+        assert resp.status_code == 200
+        assert resp.json() == {
+            "state": "FAILURE",
+            "pct": 0,
+            "message": "boom!",
+        }
 
-def test_wait_progress_task_failed(monkeypatch, client_logged_in, user):
-    arch = Archive.objects.create(
-        short_code="tskf", owner=user, ready=False, error=None, build_task_id="tid1"
-    )
+    def test_wait_progress_task_failed(self, monkeypatch, client_logged_in, user):
+        arch = Archive.objects.create(
+            short_code="tskf", owner=user, ready=False, error=None, build_task_id="tid1"
+        )
 
-    class DummyResult:
-        def failed(self): return True
-        @property
-        def info(self): return {"exc": "task failure"}
+        class DummyResult:
+            state = "FAILURE"
+            info = {"exc": "task failure"}
+            def failed(self): 
+                return True
 
-    monkeypatch.setattr("archives.views_user.AsyncResult", lambda tid: DummyResult())
+        monkeypatch.setattr(
+            "archives.views_user.AsyncResult",
+            lambda tid: DummyResult()
+        )
 
-    url = reverse("wait-progress", args=[arch.short_code])
-    response = client_logged_in.get(url)
-    assert response.status_code == 200
-    assert response.json() == {"status": "error", "message": "task failure"}
+        url = reverse("wait-progress", args=[arch.short_code])
+        resp = client_logged_in.get(url)
+        assert resp.status_code == 200
+        assert resp.json() == {
+            "state": "FAILURE",
+            "pct": 0,
+            "message": "task failure",
+        }
 
-def test_wait_progress_task_working(monkeypatch, client_logged_in, user):
-    arch = Archive.objects.create(
-        short_code="tskw", owner=user, ready=False, error=None, build_task_id="tid2"
-    )
+    def test_wait_progress_task_working(self, monkeypatch, client_logged_in, user):
+        arch = Archive.objects.create(
+            short_code="tskw", owner=user, ready=False, error=None, build_task_id="tid2"
+        )
 
-    class DummyResult:
-        def failed(self): return False
+        class DummyResult:
+            state = "PROGRESS"
+            info = {"pct": 42}
+            def failed(self): 
+                return False
 
-    monkeypatch.setattr("archives.views_user.AsyncResult", lambda tid: DummyResult())
+        monkeypatch.setattr(
+            "archives.views_user.AsyncResult",
+            lambda tid: DummyResult()
+        )
 
-    url = reverse("wait-progress", args=[arch.short_code])
-    response = client_logged_in.get(url)
-    assert response.status_code == 200
-    assert response.json() == {"status": "working"}
+        url = reverse("wait-progress", args=[arch.short_code])
+        resp = client_logged_in.get(url)
+        assert resp.status_code == 200
+        assert resp.json() == {"state": "PROGRESS", "pct": 42}

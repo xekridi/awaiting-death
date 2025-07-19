@@ -10,14 +10,12 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import sys
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-s&@abb@&-6!1_s9dlf34_a(j#dw9w-qjb-27nc8lri%4fsik8j"
@@ -26,7 +24,6 @@ SECRET_KEY = "django-insecure-s&@abb@&-6!1_s9dlf34_a(j#dw9w-qjb-27nc8lri%4fsik8j
 DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
-
 
 # Application definition
 
@@ -37,6 +34,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.humanize",
     "archives.apps.ArchivesConfig",
     "rest_framework",
 ]
@@ -72,7 +70,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
@@ -83,42 +80,29 @@ DATABASES = {
     }
 }
 
-
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = "en-us"
-
 TIME_ZONE = "UTC"
-
 USE_I18N = True
-
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -129,8 +113,6 @@ CELERY_BROKER_URL = "redis://redis:6379/0"
 CELERY_RESULT_BACKEND = "redis://redis:6379/1"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
-
-import sys, os
 
 if "pytest" in sys.argv[0]:
     CELERY_TASK_ALWAYS_EAGER = True
@@ -153,7 +135,10 @@ X_FRAME_OPTIONS = "DENY"
 SESSION_COOKIE_HTTPONLY = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 CSRF_TRUSTED_ORIGINS = ["http://localhost:8000"]
-STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
 REFERRER_POLICY = "same-origin"
+
+if not DEBUG:
+    MEDIA_URL = "/media/"
+    MEDIA_ROOT = BASE_DIR / "media"
+
 LOGIN_REDIRECT_URL = "/"

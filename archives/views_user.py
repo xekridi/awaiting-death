@@ -161,7 +161,7 @@ class StatsPageView(DetailView):
 def wait_progress(request, code):
     arch = get_object_or_404(Archive, short_code=code, owner=request.user)
 
-    if arch.ready and arch.zip_file:
+    if arch.ready:
         return JsonResponse(
             {"state": "SUCCESS", "pct": 100, "url": arch.get_download_url()}
         )
