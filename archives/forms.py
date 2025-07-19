@@ -42,15 +42,3 @@ class UploadForm(forms.Form):
         if cd.get("password1") != cd.get("password2"):
             self.add_error("password2", "Пароли не совпадают")
         return cd
-
-class SignupForm(forms.Form):
-    username  = forms.CharField(max_length=150, label="Логин")
-    email     = forms.EmailField(label="Email")
-    password1 = forms.CharField(widget=forms.PasswordInput, label="Пароль")
-    password2 = forms.CharField(widget=forms.PasswordInput, label="Повтор пароля")
-
-    def clean(self):
-        cd = super().clean() or {}
-        if cd.get("password1") != cd.get("password2"):
-            self.add_error("password2", "Пароли не совпадают")
-        return cd

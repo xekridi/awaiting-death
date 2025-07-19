@@ -14,13 +14,22 @@
         <div class="container-fluid">
             <a class="navbar-brand" href="{% url 'home' %}">default</a>
             <div class="collapse navbar-collapse">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="{% url 'upload' %}">Загрузить</a></li>
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'upload' %}">Загрузить</a>
+                    </li>
                     {% if user.is_authenticated %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Кабинет</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">Выйти</a></li>
+                    <li class="nav-item">
+                        <span class="navbar-text me-3">Привет, {{ user.username }}!</span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'dashboard' %}">Кабинет</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'logout' %}">Выйти</a>
+                    </li>
                     {% else %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Войти</a></li>
+                    <a class="nav-link" href="{% url 'login' %}">Войти / Регистрация</a>
                     {% endif %}
                 </ul>
             </div>

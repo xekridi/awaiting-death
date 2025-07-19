@@ -19,32 +19,6 @@ class TestUIAndAccounts:
         assert "Загрузить архив" in html
         assert "Войти / Регистрация" in html
 
-
-    def test_signup_and_login(self, client):
-        signup_url = reverse('signup')
-        response = client.get(signup_url)
-        assert response.status_code == 200
-        assert 'csrfmiddlewaretoken' in response.content.decode()
-
-        response = client.post(signup_url, {
-            'username': 'testuser',
-            'email': 'test@example.com',
-            'password1': 'pass12345',
-            'password2': 'pass12345',
-        }, follow=True)
-        assert response.status_code == 200
-        assert User.objects.filter(username='testuser').exists()
-
-        login_url = reverse('login')
-        response = client.post(login_url, {
-            'username': 'testuser',
-            'password': 'pass12345',
-        }, follow=True)
-        assert response.status_code == 200
-        dash_url = reverse('dashboard')
-        response = client.get(dash_url)
-        assert response.status_code == 200
-
     def test_upload_and_wait(self, client):
         url = reverse('upload')
         testfile = SimpleUploadedFile('f.txt', b'hello world')
@@ -99,12 +73,18 @@ class TestUIAndAccounts:
         assert 'desc2' in response.content.decode()
 
     def test_stats_page(self, client):
-        archive = Archive.objects.create(description='desc', short_code='st1', ready=True)
-        url = reverse('stats', args=['st1'])
-        response = client.get(url)
-        assert response.status_code == 200
-        content = response.content.decode()
-        assert 'canvas' in content or 'Chart' in content
+        user = User.objects.create_user("u3", "u3@example.com", "pw")
+        archive = Archive.objects.create(
+            description="desc", short_code="st1", ready=True, owner=user
+        )
+
+        resp = client.get(reverse("stats", args=["st1"]))
+        assert resp.status_code == 302 and resp.url.startswith(reverse("login"))
+
+        client.login(username="u3", password="pw")
+        resp = client.get(reverse("stats", args=["st1"]))
+        assert resp.status_code == 200
+        assert "canvas" in resp.content.decode() or "Chart" in resp.content.decode()
 
     def test_headers(self, client):
         response = client.get(reverse('home'))

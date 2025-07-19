@@ -1,17 +1,13 @@
-# archives/api/urls.py
-
-from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ArchiveViewSet, ArchiveStatsAPIView
+from django.urls import path, include
+from accounts.views import SignUpView, CustomLogoutView
+from .views import ArchiveViewSet, StatsByCodeAPIView
+
 
 router = DefaultRouter()
-router.register(r"archives", ArchiveViewSet, basename="archive")
+router.register("archive", ArchiveViewSet, basename="archive")
 
-urlpatterns = [
-    path("", include(router.urls)),
-    path(
-        "archives/<str:short_code>/stats/",
-        ArchiveStatsAPIView.as_view(),
-        name="archive-stats",
-    ),
+urlpatterns = router.urls
+urlpatterns += [
+    path("stats/<str:short_code>/", StatsByCodeAPIView.as_view(), name="archive-stats"),
 ]

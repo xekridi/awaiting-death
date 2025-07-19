@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     "archives.apps.ArchivesConfig",
+    "accounts.apps.AccountsConfig",
     "rest_framework",
 ]
 
