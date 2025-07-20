@@ -1,46 +1,40 @@
 from django import forms
-from django.forms.widgets import FileInput
+from django.forms.widgets import ClearableFileInput
 
-
-class MultiFileInput(FileInput):
+class MultiFileInput(ClearableFileInput):
     allow_multiple_selected = True
 
+class MultiFileField(forms.FileField):
+    widget = MultiFileInput
+
+    def to_python(self, data):
+        if not data:
+            return []
+        if isinstance(data, (list, tuple)):
+            return list(data)
+        return [data]
+
+    def validate(self, data):
+        if self.required and not data:
+            raise forms.ValidationError(self.error_messages['required'], code='required')
+        for f in data:
+            super(forms.FileField, self).validate(f)
 
 class UploadForm(forms.Form):
-    description   = forms.CharField(
-        max_length=255, required=False, label="Описание"
-    )
-
-    files = forms.FileField(
-        widget=MultiFileInput(attrs={"multiple": True}),
-        required=True,
-        label="Файлы (можно выбрать несколько)",
-    )
-
-    password1     = forms.CharField(
-        widget=forms.PasswordInput, required=False, label="Пароль"
-    )
-    password2     = forms.CharField(
-        widget=forms.PasswordInput, required=False, label="Повтор пароля"
-    )
-
-    max_downloads = forms.IntegerField(
-        min_value=0, required=False, label="Макс. скачиваний"
-    )
-    expires_at    = forms.DateTimeField(
-        required=False, label="Срок действия (UTC)"
-    )
+    files         = MultiFileField(
+                        required=True,
+                        widget=MultiFileInput(attrs={"multiple": True}),
+                        label="Выберите файлы"
+                     )
+    description   = forms.CharField(required=False)
+    password1     = forms.CharField(required=False)
+    password2     = forms.CharField(required=False)
+    max_downloads = forms.IntegerField(min_value=0, required=False)
+    expires_at    = forms.DateTimeField(required=False)
 
     def clean(self):
         cleaned = super().clean()
-
-        files = self.files.getlist("files")
+        files = cleaned.get("files")
         if not files:
-            self.add_error("files", "Нужно выбрать хотя бы один файл")
-
-        p1, p2 = cleaned.get("password1"), cleaned.get("password2")
-        if p1 or p2:
-            if p1 != p2:
-                self.add_error("password2", "Пароли не совпадают")
-
+            raise forms.ValidationError("Нужно выбрать хотя бы один файл.")
         return cleaned

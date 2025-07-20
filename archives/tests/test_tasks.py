@@ -36,3 +36,12 @@ def test_build_zip_idempotent(tmp_path, settings):
 
     assert res1 == res2
     assert mtime1 == mtime2
+
+def test_build_zip_saves_in_zips(tmp_path, settings, archive, file_item):
+    settings.MEDIA_ROOT = str(tmp_path)
+    archive.ready = False
+    archive.save(update_fields=["ready"])
+    res = build_zip.run(archive.id)
+    assert res.startswith("zips/")
+    filepath = tmp_path / res
+    assert filepath.exists()

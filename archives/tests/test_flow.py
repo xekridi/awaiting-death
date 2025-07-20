@@ -1,5 +1,6 @@
 import pytest
 import uuid
+import string
 
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -62,4 +63,4 @@ def test_post_valid_upload_redirects_to_wait(client):
     loc = resp["Location"]
     assert loc.startswith("/wait/")
     code = loc.split("/")[2]
-    assert len(code) == 10 and all(c in uuid.uuid4().hex for c in code)
+    assert len(code) == 10 and all(c in string.hexdigits.lower() for c in code)

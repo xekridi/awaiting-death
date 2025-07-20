@@ -69,6 +69,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "django.template.context_processors.csrf",
             ],
         },
     },
@@ -105,7 +106,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
-USE_I18N = True
+USE_I18N = False
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
@@ -159,13 +160,19 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "handlers": {
+        "errors": {"class": "logging.StreamHandler"},
         "console": {"class": "logging.StreamHandler"},
     },
     "root": {
-        "handlers": ["console"],
+        "handlers": ["console", "errors"],
         "level": "WARNING",
     },
     "loggers": {
+            "exception_logger": {
+            "handlers": ["errors"],
+            "level": "ERROR",
+            "propagate": False,
+        },
         "archives.views_user": {
             "handlers": ["console"],
             "level": "DEBUG",
@@ -173,3 +180,4 @@ LOGGING = {
         },
     },
 }
+LOGIN_URL = '/accounts/login/'

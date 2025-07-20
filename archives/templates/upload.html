@@ -16,7 +16,6 @@
         {{ form.files.label_tag }}
         {{ form.files }}
         {{ form.files.errors }}
-        <small>Удерживайте Ctrl/⌘, чтобы выбрать несколько</small>
     </div>
 
     <div>
@@ -41,30 +40,38 @@
 <progress id="uploadProgress" value="0" max="100" style="display:none;width:100%;margin-top:1rem;"></progress>
 
 <script>
-    (() => {
-        const form = document.getElementById("uploadForm");
-        const bar = document.getElementById("uploadProgress");
+    const form = document.getElementById('upload-form');
+    const bar = document.getElementById('upload-progress');
 
-        form.addEventListener("submit", async e => {
-            e.preventDefault();
-            bar.style.display = "block";
-            bar.value = 0;
+    form.addEventListener("submit", e => {
+        e.preventDefault();
+        bar.style.display = "block";
+        bar.value = 0;
 
-            const data = new FormData(form);
-            const resp = await fetch(form.action, {
-                method: 'POST',
-                body: data,
-                redirect: 'manual'
-            });
+        const data = new FormData(form);
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", form.action, true);
+        xhr.setRequestHeader("X-CSRFToken", document.querySelector('[name=csrfmiddlewaretoken]').value);
 
-            const loc = resp.headers.get('Location');
-            if (loc) {
-                window.location = loc;
-                return;
+        xhr.upload.onprogress = evt => {
+            if (evt.lengthComputable) {
+                bar.value = Math.round(evt.loaded / evt.total * 100);
             }
+        };
 
-            alert("Ошибка загрузки: " + resp.status);
-        });
-    })();
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                const loc = xhr.getResponseHeader("Location");
+                if (loc) {
+                    window.location = loc;
+                }
+            } else {
+                alert("Ошибка загрузки: " + xhr.status);
+            }
+        };
+
+        xhr.onerror = () => alert("Ошибка сети при загрузке");
+        xhr.send(data);
+    });
 </script>
 {% endblock %}

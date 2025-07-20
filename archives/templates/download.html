@@ -1,7 +1,30 @@
-{% extends "base.html" %}{% block content %}
-<h3>Скачать {{ archive.description|default:archive.short_code }}</h3>
-<form method="post" class="vstack gap-3">{% csrf_token %}{{ form.as_p }}
-    <button class="btn btn-success" type="submit">Скачать</button>
-</form>
-<p class="text-muted">Осталось скачиваний: {{ archive.max_downloads|default:"∞" }}</p>
-{% endblock %}
+{% load static custom_filters %}
+<!doctype html>
+<html>
+
+<head></head>
+
+<body>
+    <h2>Архив {{ archive.short_code }}</h2>
+    <p>{{ archive.description }}</p>
+
+    {% if not file_exists %}
+    <p><em>Файл удалён</em></p>
+    {% else %}
+    <ul>
+        {% for f in files %}
+        <li>{{ f.file.name|basename }}</li>
+        {% endfor %}
+    </ul>
+    {% if archive.password %}
+    <form method="get" action="{% url 'download-file' archive.short_code %}">
+        <input name="password" placeholder="Пароль">
+        <button type="submit">Скачать</button>
+    </form>
+    {% else %}
+    <a href="{% url 'download-file' archive.short_code %}" class="btn">Скачать</a>
+    {% endif %}
+    {% endif %}
+</body>
+
+</html>

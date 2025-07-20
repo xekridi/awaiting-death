@@ -2,6 +2,7 @@ import os
 import uuid
 import logging
 
+from pathlib import Path
 from django.conf import settings
 from django.db.models import F
 from django.db import IntegrityError
@@ -37,21 +38,7 @@ class HomePage(TemplateView):
 
 class UploadView(FormView):
     template_name = "upload.html"
-    form_class    = UploadForm
-
-    def post(self, request, *args, **kwargs):
-        logger.debug("=== UploadView.POST start ===")
-        logger.debug("Headers: %s", dict(request.headers))
-        logger.debug("POST keys: %s", list(request.POST.keys()))
-        logger.debug("FILES keys: %s", list(request.FILES.keys()))
-
-        
-        uploaded = request.POST.get("files")
-        if not request.FILES.getlist("files") and isinstance(uploaded, UploadedFile):
-            request.FILES.setlist("files", [uploaded])
-            logger.debug("Moved UploadedFile from POST to FILES")
-
-        return super().post(request, *args, **kwargs)
+    form_class = UploadForm
 
     def form_invalid(self, form):
         logger.debug("=== UploadView.form_invalid ===")
@@ -59,14 +46,14 @@ class UploadView(FormView):
         return super().form_invalid(form)
 
     def form_valid(self, form):
-        cd   = form.cleaned_data
+        cd = form.cleaned_data
         code = uuid.uuid4().hex[:10]
         logger.debug("=== UploadView.form_valid === code=%s", code)
 
         archive = Archive.objects.create(
-            short_code    = code,
-            description   = cd.get("description") or "",
-            password      = cd.get("password1") or "",
+            short_code=code,
+            description   = cd.get("description", ""),
+            password      = cd.get("password1", ""),
             max_downloads = cd.get("max_downloads") or 0,
             expires_at    = cd.get("expires_at"),
             owner         = self.request.user if self.request.user.is_authenticated else None,
@@ -74,7 +61,7 @@ class UploadView(FormView):
         )
         logger.debug("Archive created id=%s owner=%r", archive.id, archive.owner)
 
-        files = self.request.FILES.getlist("files")
+        files = cd["files"]
         logger.debug("Saving %d files: %s", len(files), [f.name for f in files])
         for f in files:
             FileItem.objects.create(archive=archive, file=f)
@@ -101,74 +88,131 @@ class WaitView(TemplateView):
 
 
 def wait_progress(request, code):
-    logger.debug("=== wait_progress === code=%s user=%r", code, request.user)
-    archive = get_object_or_404(Archive, short_code=code, deleted_at__isnull=True)
+    base_qs = Archive.objects.filter(short_code=code, deleted_at__isnull=True)
 
-    if archive.owner:
-        if not request.user.is_authenticated:
-            from django.contrib.auth.views import redirect_to_login
-            logger.debug("wait_progress: redirect to login")
+    if not request.user.is_authenticated:
+        try:
+            archive = base_qs.get(owner__isnull=True)
+        except Archive.DoesNotExist:
             return redirect_to_login(request.get_full_path())
-        if request.user != archive.owner:
-            logger.debug("wait_progress: wrong owner -> 404")
+    else:
+        archive = get_object_or_404(base_qs)
+        if archive.owner and archive.owner != request.user:
             raise Http404()
 
+    if archive.owner and archive.error:
+        return JsonResponse({
+            "state": "FAILURE",
+            "pct": 0,
+            "message": archive.error,
+        })
+
     if archive.ready:
-        return JsonResponse({"state": "SUCCESS", "pct": 100, "url": archive.get_download_url()})
-    if archive.error:
-        return JsonResponse({"state": "FAILURE", "pct": 0, "message": archive.error})
+        if archive.owner:
+            return JsonResponse({
+                "state": "SUCCESS",
+                "pct": 100,
+                "url": archive.get_download_url(),
+            })
+        return JsonResponse({"pct": 100})
+
     if not archive.build_task_id:
-        return JsonResponse({"state": "PENDING", "pct": 0})
+        if archive.owner:
+            return JsonResponse({"state": "PENDING", "pct": 0})
+        return JsonResponse({"pct": 0})
 
-    res = AsyncResult(archive.build_task_id)
-    logger.debug("Celery state=%s info=%r", res.state, res.info)
+    result = AsyncResult(archive.build_task_id)
+    info = getattr(result, "info", {}) or {}
+    pct = info.get("pct", 0)
 
-    if res.failed():
-        info = res.info or {}
-        msg = info.get("exc") if isinstance(info, dict) else str(info)
-        return JsonResponse({"state": "FAILURE", "pct": 0, "message": msg})
+    if (hasattr(result, "failed") and result.failed()) or result.state == "FAILURE":
+        msg = info.get("exc") or info.get("message") or ""
+        if archive.owner:
+            return JsonResponse({"state": "FAILURE", "pct": 0, "message": msg})
+        return JsonResponse({"pct": 0})
 
-    pct = (res.info or {}).get("pct", 0)
-    if res.state == "SUCCESS":
-        if not archive.ready:
-            archive.ready = True
-            archive.save(update_fields=["ready"])
-        return JsonResponse({"state": "SUCCESS", "pct": 100, "url": archive.get_download_url()})
+    if archive.owner:
+        return JsonResponse({"state": result.state, "pct": pct})
+    return JsonResponse({"pct": pct})
 
-    return JsonResponse({"state": res.state, "pct": pct})
+class DownloadPageView(DetailView):
+    model = Archive
+    template_name = "download.html"
+    context_object_name = "archive"
+    slug_field = "short_code"
+    slug_url_kwarg = "code"
+
+    def get_object(self):
+        return get_object_or_404(
+            Archive,
+            short_code=self.kwargs["code"],
+            deleted_at__isnull=True,
+        )
+
+    def get_context_data(self, **ctx):
+        ctx = super().get_context_data(**ctx)
+        ctx["files"] = FileItem.objects.filter(archive=self.object)
+        zip_path = Path(settings.MEDIA_ROOT) / self.object.zip_file.name
+        ctx["file_exists"] = zip_path.exists()
+        return ctx
 
 
 class DownloadView(View):
     def get(self, request, code):
-        arch = get_object_or_404(Archive, short_code=code, ready=True)
-        if arch.expires_at and arch.expires_at < timezone.now():
-            raise Http404
-        if arch.password and request.GET.get("password") != arch.password:
+        archive = get_object_or_404(
+            Archive.objects.filter(short_code=code, ready=True),
+        )
+
+        if archive.expires_at and archive.expires_at < timezone.now():
+            raise Http404()
+
+        if archive.password and request.GET.get("password", "") != archive.password:
             return HttpResponseForbidden()
-        if arch.max_downloads and arch.download_count >= arch.max_downloads:
+
+        if archive.max_downloads and archive.download_count >= archive.max_downloads:
             return HttpResponseForbidden()
-        Archive.objects.filter(pk=arch.pk).update(download_count=F("download_count") + 1)
+
+        if archive.max_downloads:
+            ok = Archive.objects.filter(
+                pk=archive.pk,
+                download_count__lt=archive.max_downloads
+            ).update(download_count=F("download_count") + 1)
+            if not ok:
+                return HttpResponseForbidden()
+        else:
+            Archive.objects.filter(pk=archive.pk).update(
+                download_count=F("download_count") + 1
+            )
+
         ClickLog.objects.create(
-            archive=arch,
+            archive=archive,
             referer=request.META.get("HTTP_REFERER", ""),
             ip_address=request.META.get("REMOTE_ADDR", ""),
         )
 
-        file_path = os.path.join(settings.MEDIA_ROOT, arch.zip_file.name)
-        if not os.path.exists(file_path):
-            raise Http404
-        return FileResponse(open(file_path, "rb"), as_attachment=True, filename=os.path.basename(file_path))
+        zip_path = Path(settings.MEDIA_ROOT) / archive.zip_file.name
+        if not zip_path.exists():
+            raise Http404()
 
+        return FileResponse(
+            open(zip_path, "rb"),
+            as_attachment=True,
+            filename=zip_path.name
+        )
 
 
 class DashboardView(LoginRequiredMixin, ListView):
-    model = Archive
     template_name = "dashboard.html"
     context_object_name = "archives"
-    login_url = reverse_lazy("login")
 
     def get_queryset(self):
         return self.request.user.archives.filter(deleted_at__isnull=True)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        from django.utils import timezone
+        ctx["now"] = timezone.now()
+        return ctx
 
 
 class ArchiveDetailView(LoginRequiredMixin, DetailView):
@@ -188,7 +232,7 @@ class StatsPageView(LoginRequiredMixin, DetailView):
     template_name = "stats.html"
     slug_field = "short_code"
     slug_url_kwarg = "short_code"
-    login_url = "login"
+    login_url = reverse_lazy("login")
     
     def get_queryset(self):
         return self.request.user.archives.all()

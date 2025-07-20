@@ -7,7 +7,7 @@ build:
 	docker compose up -d --build
 
 test:
-	docker compose exec web pytest -q -s
+	docker compose exec web pytest -q
 
 migrate:
 	docker compose run --rm web python manage.py makemigrations

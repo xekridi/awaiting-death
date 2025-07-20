@@ -1,50 +1,57 @@
-from rest_framework import viewsets, status
+import os
+from django.conf import settings
+from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from django.contrib.auth.views import LogoutView
-from django.urls import reverse_lazy
-from archives.models import Archive, FileItem
-from archives.tasks import build_zip
-from .serializers import ArchiveSerializer, FileItemSerializer
-from archives.business.stats import get_downloads_by_day, get_top_referers
+from .serializers import ArchiveSerializer
+from ..models import Archive, FileItem
+from ..business.stats import get_downloads_by_day, get_top_referers
 
-
-class ArchiveStatsAPIView(APIView):
-    def get(self, request, short_code):
-        by_day = get_downloads_by_day(short_code)
-        referers = get_top_referers(short_code)
-        return Response({"by_day": by_day, "top_referers": referers})
+class IsOwner(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj.owner == request.user
 
 class ArchiveViewSet(viewsets.ModelViewSet):
-    queryset = Archive.objects.all()
     serializer_class = ArchiveSerializer
 
-    @action(detail=True, methods=["post"], url_path="upload")
+    def get_permissions(self):
+        if self.action in ['create', 'upload']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated(), IsOwner()]
+
+    def get_queryset(self):
+        if self.action == "upload":
+            return Archive.objects.all()
+        return self.request.user.archives.filter(deleted_at__isnull=True)
+
+    @action(detail=True, methods=['post'], url_path='upload', parser_classes=[MultiPartParser])
     def upload(self, request, pk=None):
-        serializer = FileItemSerializer(
-            data={"file": request.FILES["file"], "archive": pk}
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    @action(detail=True, methods=["get"], url_path="stats")
-    def stats(self, request, pk=None):
         archive = self.get_object()
-        return Response({
-            "by_day":       get_downloads_by_day(archive.short_code),
-            "top_referers": get_top_referers(archive.short_code),
-        })
+        f = request.FILES.get('file')
+        if not f:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        FileItem.objects.create(archive=archive, file=f)
+        return Response(status=status.HTTP_201_CREATED)
 
-class StatsByCodeAPIView(APIView):
+    def destroy(self, request, *args, **kwargs):
+        archive = self.get_object()
+        zip_name = archive.zip_file.name
+        if zip_name:
+            path = os.path.join(settings.MEDIA_ROOT, zip_name)
+            if os.path.exists(path):
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+        FileItem.objects.filter(archive=archive).delete()
+        archive.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class StatsAPIView(APIView):
     def get(self, request, short_code):
-        arch = Archive.objects.filter(short_code=short_code).first()
-        if not arch:
-            return Response({"detail": "Not found."}, status=404)
         return Response({
-            "by_day":       get_downloads_by_day(short_code),
+            "by_day": get_downloads_by_day(short_code),
             "top_referers": get_top_referers(short_code),
         })
