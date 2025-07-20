@@ -1,5 +1,6 @@
-(() => {
+document.addEventListener("DOMContentLoaded", () => {
     const progressEl = document.getElementById("buildProgress");
+    if (!progressEl) return;
 
     const poll = () => {
         fetch(window.progressUrl)
@@ -16,4 +17,4 @@
     };
 
     poll();
-})();
+});

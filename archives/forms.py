@@ -1,44 +1,44 @@
 from django import forms
-from .models import Archive
+from django.forms.widgets import FileInput
 
-class MultiFileInput(forms.ClearableFileInput):
+
+class MultiFileInput(FileInput):
     allow_multiple_selected = True
 
-class ArchiveCreateForm(forms.ModelForm):
-    password      = forms.CharField(
-        required=False, widget=forms.PasswordInput, label="Пароль"
-    )
-    expires_at    = forms.DateTimeField(
-        required=False, label="Истекает в"
-    )
-    max_downloads = forms.IntegerField(
-        required=False, min_value=1, label="Максимум загрузок"
-    )
-
-    class Meta:
-        model = Archive
-        fields = ("description", "password", "expires_at", "max_downloads")
 
 class UploadForm(forms.Form):
-    description   = forms.CharField(required=False, label="Описание")
+    description   = forms.CharField(
+        max_length=255, required=False, label="Описание"
+    )
+
     files         = forms.FileField(
         widget=MultiFileInput(attrs={"multiple": True}),
         required=True,
-        label="Файлы",
+        label="Файлы (можно несколько)",
     )
+
     password1     = forms.CharField(
-        required=False, widget=forms.PasswordInput, label="Пароль"
+        widget=forms.PasswordInput, required=False, label="Пароль"
     )
     password2     = forms.CharField(
-        required=False, widget=forms.PasswordInput, label="Повтор пароля"
+        widget=forms.PasswordInput, required=False, label="Повтор пароля"
     )
     max_downloads = forms.IntegerField(
-        required=False, min_value=1, label="Максимум загрузок"
+        min_value=0, required=False, label="Макс. скачиваний"
     )
-    expires_at    = forms.DateTimeField(required=False, label="Истекает в")
+    expires_at    = forms.DateTimeField(
+        required=False, label="Срок действия (UTC)"
+    )
 
     def clean(self):
-        cd = super().clean() or {}
-        if cd.get("password1") != cd.get("password2"):
-            self.add_error("password2", "Пароли не совпадают")
-        return cd
+        cleaned = super().clean()
+
+        if not self.files.getlist("files"):
+            self.add_error("files", "Нужно выбрать хотя бы один файл")
+
+        p1, p2 = cleaned.get("password1"), cleaned.get("password2")
+        if p1 or p2:
+            if p1 != p2:
+                self.add_error("password2", "Пароли не совпадают")
+
+        return cleaned

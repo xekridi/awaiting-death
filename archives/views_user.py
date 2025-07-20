@@ -7,7 +7,7 @@ from django.db.models import F
 from django.db import IntegrityError
 from django.http import Http404, HttpResponseForbidden, FileResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.contrib.auth.views import redirect_to_login
 from django.utils import timezone
 from django.views import View
@@ -38,16 +38,10 @@ class UploadView(FormView):
     template_name = "upload.html"
     form_class    = UploadForm
 
-    def post(self, request, *args, **kwargs):
-        file_in_post = request.POST.get('files')
-        if isinstance(file_in_post, UploadedFile) and not request.FILES.getlist('files'):
-            request.FILES.setlist('files', [file_in_post])
-        return super().post(request, *args, **kwargs)
-
     def form_valid(self, form):
-        cd = form.cleaned_data
+        cd   = form.cleaned_data
         code = uuid.uuid4().hex[:10]
-        logger.debug("UploadView.form_valid called: code=%s", code)
+        logger.debug("form_valid: code=%s user=%s", code, self.request.user)
 
         archive = Archive.objects.create(
             short_code    = code,
@@ -58,7 +52,6 @@ class UploadView(FormView):
             owner         = self.request.user if self.request.user.is_authenticated else None,
             ready         = False,
         )
-        logger.debug("Archive created: id=%s", archive.id)
 
         for f in self.request.FILES.getlist("files"):
             FileItem.objects.create(archive=archive, file=f)
@@ -66,9 +59,11 @@ class UploadView(FormView):
         res = build_zip.apply_async((archive.id,))
         archive.build_task_id = res.id
         archive.save(update_fields=["build_task_id"])
-        logger.debug("Triggered build_zip: task_id=%s", res.id)
+        logger.debug("Triggered build_zip task_id=%s", res.id)
 
-        return redirect("wait", code=archive.short_code)
+        wait_url = reverse("wait", args=[archive.short_code])
+
+        return redirect(wait_url)
 
 
 class WaitView(TemplateView):

@@ -1,69 +1,56 @@
 {% extends "base.html" %}
-{% load static %}
-
 {% block content %}
 <h3>Загрузить архив</h3>
-
-<form id="uploadForm" method="post" action="{% url 'upload' %}" enctype="multipart/form-data" class="vstack gap-3">
+<form id="uploadForm" method="post" action="{% url 'upload' %}" enctype="multipart/form-data">
     {% csrf_token %}
     {{ form.non_field_errors }}
+    <div>{{ form.description.label_tag }} {{ form.description }} {{ form.description.errors }}</div>
+    <div>{{ form.files.label_tag }} {{ form.files }} {{ form.files.errors }}</div>
     <div>
-        {{ form.description.label_tag }} {{ form.description }} {{ form.description.errors }}
-    </div>
-    <div>
-        {{ form.files.label_tag }} {{ form.files }} {{ form.files.errors }}
-    </div>
-    <div>
-        {{ form.password1.label_tag }} {{ form.password1 }} {{ form.password1.errors }}
+        {{ form.password1.label_tag }} {{ form.password1 }}
         {{ form.password2.label_tag }} {{ form.password2 }} {{ form.password2.errors }}
     </div>
-    <div>
-        {{ form.max_downloads.label_tag }} {{ form.max_downloads }} {{ form.max_downloads.errors }}
-    </div>
-    <div>
-        {{ form.expires_at.label_tag }} {{ form.expires_at }} {{ form.expires_at.errors }}
-    </div>
-
-    <button id="submitBtn" class="btn btn-primary" type="submit">
-        Собрать ZIP
-    </button>
+    <div>{{ form.max_downloads.label_tag }} {{ form.max_downloads }} {{ form.max_downloads.errors }}</div>
+    <div>{{ form.expires_at.label_tag }} {{ form.expires_at }} {{ form.expires_at.errors }}</div>
+    <button class="btn btn-primary" type="submit">Собрать ZIP</button>
 </form>
-
-<progress id="uploadProgress" value="0" max="100" style="display:none; width:100%; margin-top:1rem;"></progress>
+<progress id="uploadProgress" value="0" max="100" style="display:none;width:100%;"></progress>
 
 <script>
     (() => {
         const form = document.getElementById("uploadForm");
-        const progress = document.getElementById("uploadProgress");
+        const bar = document.getElementById("uploadProgress");
 
-        form.addEventListener("submit", e => {
+        form.addEventListener("submit", async e => {
             e.preventDefault();
-            progress.style.display = "block";
-            progress.value = 0;
+            bar.style.display = "block";
+            bar.value = 0;
 
             const data = new FormData(form);
-            const xhr = new XMLHttpRequest();
-            xhr.open("POST", "{% url 'upload' %}");
-            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+            const resp = await fetch(form.action, {
+                method: 'POST',
+                body: data,
+                redirect: 'manual'
+            });
 
-            xhr.upload.onprogress = evt => {
-                if (evt.lengthComputable) {
-                    progress.value = Math.round(evt.loaded / evt.total * 100);
-                }
-            };
+            const loc = resp.headers.get('Location');
+            if (loc) {
+                window.location = loc;
+                return;
+            }
 
-            xhr.onload = () => {
-                if (xhr.status === 302) {
-                    window.location.href = xhr.getResponseHeader("Location");
-                } else {
-                    alert("Ошибка загрузки: " + xhr.status);
-                }
-            };
-            xhr.onerror = () => {
-                alert("Сетевая ошибка при загрузке");
-            };
+            if (resp.type === 'opaqueredirect' || resp.status === 302 || resp.status === 303) {
+                window.location = form.action.replace('upload', 'wait') + '/';
+                return;
+            }
 
-            xhr.send(data);
+            if (resp.ok) {
+                const text = await resp.text();
+                document.open(); document.write(text); document.close();
+                return;
+            }
+
+            alert("Ошибка загрузки: " + resp.status);
         });
     })();
 </script>
