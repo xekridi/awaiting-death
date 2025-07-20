@@ -1,5 +1,7 @@
 import os
 import uuid
+import logging
+
 from django.conf import settings
 from django.db.models import F
 from django.db import IntegrityError
@@ -11,6 +13,7 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import TemplateView, FormView, ListView, DetailView
 from celery.result import AsyncResult
+from django.core.files.uploadedfile import UploadedFile
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -36,18 +39,16 @@ class UploadView(FormView):
     form_class    = UploadForm
 
     def post(self, request, *args, **kwargs):
-        form = self.get_form()
-        form.is_valid()
-        return self.form_valid(form)
+        file_in_post = request.POST.get('files')
+        if isinstance(file_in_post, UploadedFile) and not request.FILES.getlist('files'):
+            request.FILES.setlist('files', [file_in_post])
+        return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
         cd = form.cleaned_data
         code = uuid.uuid4().hex[:10]
-        user = self.request.user
-        logger.debug(
-            "UploadView.form_valid called: user=%r, is_authenticated=%s, user.id=%r",
-            user, user.is_authenticated, getattr(user, "id", None)
-        )
+        logger.debug("UploadView.form_valid called: code=%s", code)
+
         archive = Archive.objects.create(
             short_code    = code,
             description   = cd.get("description") or "",
@@ -57,14 +58,16 @@ class UploadView(FormView):
             owner         = self.request.user if self.request.user.is_authenticated else None,
             ready         = False,
         )
+        logger.debug("Archive created: id=%s", archive.id)
 
-        files = self.request.FILES.getlist("files") or []
-        for f in files:
+        for f in self.request.FILES.getlist("files"):
             FileItem.objects.create(archive=archive, file=f)
 
         res = build_zip.apply_async((archive.id,))
         archive.build_task_id = res.id
         archive.save(update_fields=["build_task_id"])
+        logger.debug("Triggered build_zip: task_id=%s", res.id)
+
         return redirect("wait", code=archive.short_code)
 
 

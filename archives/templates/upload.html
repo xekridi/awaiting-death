@@ -1,42 +1,32 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block content %}
 <h3>Загрузить архив</h3>
 
-<form id="uploadForm" enctype="multipart/form-data" class="vstack gap-3">
+<form id="uploadForm" method="post" action="{% url 'upload' %}" enctype="multipart/form-data" class="vstack gap-3">
     {% csrf_token %}
+    {{ form.non_field_errors }}
     <div>
-        {{ form.description.label_tag }}
-        {{ form.description }}
-        {{ form.description.errors }}
+        {{ form.description.label_tag }} {{ form.description }} {{ form.description.errors }}
     </div>
     <div>
-        {{ form.password1.label_tag }}
-        {{ form.password1 }}
-        {{ form.password1.errors }}
+        {{ form.files.label_tag }} {{ form.files }} {{ form.files.errors }}
     </div>
     <div>
-        {{ form.password2.label_tag }}
-        {{ form.password2 }}
-        {{ form.password2.errors }}
+        {{ form.password1.label_tag }} {{ form.password1 }} {{ form.password1.errors }}
+        {{ form.password2.label_tag }} {{ form.password2 }} {{ form.password2.errors }}
     </div>
     <div>
-        {{ form.max_downloads.label_tag }}
-        {{ form.max_downloads }}
-        {{ form.max_downloads.errors }}
+        {{ form.max_downloads.label_tag }} {{ form.max_downloads }} {{ form.max_downloads.errors }}
     </div>
     <div>
-        {{ form.expires_at.label_tag }}
-        {{ form.expires_at }}
-        {{ form.expires_at.errors }}
-    </div>
-    <div>
-        {{ form.files.label_tag }}
-        {{ form.files }}
-        {{ form.files.errors }}
+        {{ form.expires_at.label_tag }} {{ form.expires_at }} {{ form.expires_at.errors }}
     </div>
 
-    <button id="submitBtn" class="btn btn-primary" type="submit">Собрать ZIP</button>
+    <button id="submitBtn" class="btn btn-primary" type="submit">
+        Собрать ZIP
+    </button>
 </form>
 
 <progress id="uploadProgress" value="0" max="100" style="display:none; width:100%; margin-top:1rem;"></progress>
@@ -64,7 +54,7 @@
 
             xhr.onload = () => {
                 if (xhr.status === 302) {
-                    window.location = xhr.getResponseHeader("Location");
+                    window.location.href = xhr.getResponseHeader("Location");
                 } else {
                     alert("Ошибка загрузки: " + xhr.status);
                 }

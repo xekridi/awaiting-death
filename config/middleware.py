@@ -1,5 +1,5 @@
 class SecurityHeadersMiddleware:
-    def __init__(self, get_response): 
+    def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
@@ -9,9 +9,9 @@ class SecurityHeadersMiddleware:
         resp["Referrer-Policy"] = "same-origin"
         resp["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self'; "
-            "style-src 'self'; "
-            "img-src 'self' data:; "
-            "font-src 'self';"
+            "script-src 'self' 'unsafe-inline' https:; "
+            "style-src  'self' 'unsafe-inline' https:; "
+            "img-src    'self' data:; "
+            "font-src   'self';"
         )
         return resp

@@ -1,4 +1,6 @@
 import pytest
+import uuid
+
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -36,3 +38,29 @@ def test_signup_login_upload_wait_flow(client):
     html = resp.content.decode()
     assert resp.status_code == 200
     assert "<progress" in html and "wait-progress" in html and "const progressUrl" in html
+
+def test_get_upload_page(client):
+    url = reverse("upload")
+    resp = client.get(url)
+    assert resp.status_code == 200
+    html = resp.content.decode()
+    assert "<form" in html and 'enctype="multipart/form-data"' in html
+
+def test_post_valid_upload_redirects_to_wait(client):
+    url = reverse("upload")
+    f = SimpleUploadedFile("a.txt", b"data")
+    resp = client.post(
+        url,
+        {
+            "description": "foo",
+            "files": f,
+            "password1": "",
+            "password2": "",
+        },
+        format="multipart",
+    )
+    assert resp.status_code == 302
+    loc = resp["Location"]
+    assert loc.startswith("/wait/")
+    code = loc.split("/")[2]
+    assert len(code) == 10 and all(c in uuid.uuid4().hex for c in code)
