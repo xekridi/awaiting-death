@@ -3,10 +3,6 @@
 {% block content %}
 <h3>Загрузить архив</h3>
 
-{% extends "base.html" %}
-{% block content %}
-<h3>Загрузить архив</h3>
-
 <form id="uploadForm" enctype="multipart/form-data" class="vstack gap-3">
     {% csrf_token %}
     <div>
@@ -62,20 +58,17 @@
 
             xhr.upload.onprogress = evt => {
                 if (evt.lengthComputable) {
-                    const pct = Math.round(evt.loaded / evt.total * 100);
-                    progress.value = pct;
+                    progress.value = Math.round(evt.loaded / evt.total * 100);
                 }
             };
 
             xhr.onload = () => {
                 if (xhr.status === 302) {
-                    const redirectUrl = xhr.getResponseHeader("Location");
-                    window.location.href = redirectUrl;
+                    window.location = xhr.getResponseHeader("Location");
                 } else {
                     alert("Ошибка загрузки: " + xhr.status);
                 }
             };
-
             xhr.onerror = () => {
                 alert("Сетевая ошибка при загрузке");
             };

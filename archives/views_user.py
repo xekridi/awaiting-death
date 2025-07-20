@@ -31,7 +31,7 @@ class HomePage(TemplateView):
     template_name = "home.html"
 
 
-class UploadView(LoginRequiredMixin, FormView):
+class UploadView(FormView):
     template_name = "upload.html"
     form_class    = UploadForm
 
@@ -70,7 +70,7 @@ class UploadView(LoginRequiredMixin, FormView):
 
 class WaitView(TemplateView):
     template_name = "wait.html"
-    
+
     def get_context_data(self, **kwargs):
         return {"archive": get_object_or_404(
             Archive, short_code=kwargs["code"], deleted_at__isnull=True
