@@ -14,7 +14,6 @@ class Archive(models.Model):
     password        = models.CharField(max_length=128, blank=True)
     max_downloads   = models.PositiveIntegerField(default=0)
     download_count  = models.PositiveIntegerField(default=0)
-    description     = models.TextField(blank=True)
     created_at      = models.DateTimeField(auto_now_add=True)
     expires_at      = models.DateTimeField(null=True, blank=True)
     ready           = models.BooleanField(default=False)

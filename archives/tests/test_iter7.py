@@ -39,6 +39,11 @@ class TestUIAndAccounts:
         response = client.get(wait_url)
         assert response.status_code == 200
 
+        content = response.content.decode("utf-8")
+        assert "<progress" in content
+        assert "wait-progress" in content
+        assert "const progressUrl" in content
+
         content = response.content.decode('utf-8')
         assert 'const progressUrl' in content
 

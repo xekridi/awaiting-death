@@ -1,3 +1,10 @@
+import celery.result
+
+def _eager_result_new(cls, *args, **kwargs):
+    return object.__new__(cls)
+
+celery.result.EagerResult.__new__ = classmethod(_eager_result_new)
+
 import os
 import uuid
 import zipfile
@@ -10,6 +17,8 @@ from django.conf import settings
 from django.utils import timezone
 from django.core.files.storage import default_storage
 from django.core.files import File
+from django.db import transaction
+
 
 from .models import Archive, FileItem
 from config.celery import app
@@ -25,14 +34,16 @@ logger = logging.getLogger(__name__)
     retry_backoff_max=600,
 )
 def build_zip(self, archive_id):
-    arch = Archive.objects.select_for_update().get(pk=archive_id)
+    with transaction.atomic():
+        arch = Archive.objects.select_for_update().get(pk=archive_id)
 
-    if not arch.build_task_id:
-        Archive.objects.filter(pk=archive_id).update(build_task_id=self.request.id)
+        if not arch.build_task_id:
+            arch.build_task_id = self.request.id
+            arch.save(update_fields=["build_task_id"])
 
-    if arch.zip_file and default_storage.exists(arch.zip_file.name):
-        self.update_state(state=states.SUCCESS, meta={"pct": 100})
-        return arch.zip_file.name
+        if arch.zip_file and default_storage.exists(arch.zip_file.name):
+            self.update_state(state=states.SUCCESS, meta={"pct": 100})
+            return arch.zip_file.name
 
     zip_dir = Path(settings.MEDIA_ROOT) / "zips"
     zip_dir.mkdir(parents=True, exist_ok=True)
@@ -41,6 +52,7 @@ def build_zip(self, archive_id):
 
     files_qs = FileItem.objects.filter(archive=arch)
     total = files_qs.count() or 1
+
     self.update_state(state="PROGRESS", meta={"pct": 5})
 
     try:
@@ -50,20 +62,26 @@ def build_zip(self, archive_id):
                 pct = 5 + int(idx * 85 / total)
                 self.update_state(state="PROGRESS", meta={"pct": pct})
 
+        rel_path = f"zips/{zip_name}"
         with open(tmp_path, "rb") as fp:
-            arch.zip_file.save(f"zips/{zip_name}", File(fp))
+            default_storage.save(rel_path, File(fp))
 
-        arch.ready = True
-        arch.error = None
-        arch.save(update_fields=["zip_file", "ready", "error"])
+        with transaction.atomic():
+            arch = Archive.objects.select_for_update().get(pk=archive_id)
+            arch.zip_file.name = rel_path
+            arch.ready = True
+            arch.error = None
+            arch.save(update_fields=["zip_file", "ready", "error"])
 
         self.update_state(state=states.SUCCESS, meta={"pct": 100})
-        return arch.zip_file.name
+        return rel_path
 
     except Exception as exc:
         logger.exception("build_zip failed for archive %s", archive_id)
-        arch.error = str(exc)
-        arch.save(update_fields=["error"])
+        with transaction.atomic():
+            arch = Archive.objects.select_for_update().get(pk=archive_id)
+            arch.error = str(exc)
+            arch.save(update_fields=["error"])
         self.update_state(state=states.FAILURE, meta={"exc": str(exc)})
         raise Ignore()
 

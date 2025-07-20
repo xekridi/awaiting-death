@@ -3,6 +3,9 @@ from django.contrib.auth import login
 from django.urls import reverse_lazy
 from django.views.generic import CreateView
 from .forms import SignUpForm
+import logging
+
+logger = logging.getLogger(__name__)
 
 class SignUpView(CreateView):
     form_class    = SignUpForm
@@ -21,3 +24,7 @@ class CustomLoginView(LoginView):
 class CustomLogoutView(LogoutView):
     next_page = reverse_lazy("home")
     http_method_names = ["get", "post"]
+    
+    def get(self, request, *args, **kwargs):
+        logger.debug("CustomLogoutView.get called: user=%r", request.user)
+        return super().post(request, *args, **kwargs)

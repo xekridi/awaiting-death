@@ -6,6 +6,7 @@ from django.db import IntegrityError
 from django.http import Http404, HttpResponseForbidden, FileResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
+from django.contrib.auth.views import redirect_to_login
 from django.utils import timezone
 from django.views import View
 from django.views.generic import TemplateView, FormView, ListView, DetailView
@@ -22,6 +23,9 @@ from .models import Archive, FileItem, ClickLog
 from .tasks import build_zip
 from .business.stats import get_downloads_by_day, get_top_referers
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 class HomePage(TemplateView):
     template_name = "home.html"
@@ -40,14 +44,17 @@ class UploadView(FormView):
         cd = form.cleaned_data
         code = uuid.uuid4().hex[:10]
         user = self.request.user
-        owner_id = self.request.user.id if self.request.user.is_authenticated else None
+        logger.debug(
+            "UploadView.form_valid called: user=%r, is_authenticated=%s, user.id=%r",
+            user, user.is_authenticated, getattr(user, "id", None)
+        )
         archive = Archive.objects.create(
             short_code    = code,
             description   = cd.get("description") or "",
             password      = cd.get("password1") or "",
             max_downloads = cd.get("max_downloads") or 0,
             expires_at    = cd.get("expires_at"),
-            owner_id      = owner_id,
+            owner         = self.request.user if self.request.user.is_authenticated else None,
             ready         = False,
         )
 
@@ -68,36 +75,61 @@ class WaitView(TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["archive"] = get_object_or_404(
-            Archive, short_code=kwargs["code"], owner=self.request.user
+            Archive, short_code=kwargs["code"]
         )
         return ctx
 
 
-@login_required
 def wait_progress(request, code):
-    arch = get_object_or_404(Archive, short_code=code, owner=request.user)
+    try:
+        arch = Archive.objects.get(short_code=code, deleted_at__isnull=True)
+    except Archive.DoesNotExist:
+        if not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
+        raise Http404
+
+    if arch.owner is None:
+        pct = (AsyncResult(arch.build_task_id).info or {}).get("pct", 0)
+        return JsonResponse({"pct": pct})
+
+    if not request.user.is_authenticated:
+        return redirect_to_login(request.get_full_path())
+    if arch.owner_id != request.user.id:
+        raise Http404
+
     if arch.ready:
-        return JsonResponse(
-            {"state": "SUCCESS", "pct": 100, "url": arch.get_download_url()}
-        )
+        return JsonResponse({
+            "state": "SUCCESS",
+            "pct": 100,
+            "url": arch.get_download_url(),
+        })
     if arch.error:
-        return JsonResponse({"state": "FAILURE", "pct": 0, "message": arch.error})
+        return JsonResponse({
+            "state": "FAILURE",
+            "pct": 0,
+            "message": arch.error,
+        })
     if not arch.build_task_id:
         return JsonResponse({"state": "PENDING", "pct": 0})
+
     res = AsyncResult(arch.build_task_id)
     if res.failed():
         info = res.info or {}
-        message = info.get("exc") if isinstance(info, dict) and "exc" in info else str(info)
-        return JsonResponse({"state": "FAILURE", "pct": 0, "message": message})
-    pct = (res.info or {}).get("pct", 0)
-    if res.state == "SUCCESS":
+        msg = info.get("exc") if isinstance(info, dict) and "exc" in info else str(info)
+        return JsonResponse({"state": "FAILURE", "pct": 0, "message": msg})
+
+    state = res.state
+    pct   = (res.info or {}).get("pct", 0)
+    if state == "SUCCESS":
         if not arch.ready:
             arch.ready = True
             arch.save(update_fields=["ready"])
-        return JsonResponse(
-            {"state": "SUCCESS", "pct": 100, "url": arch.get_download_url()}
-        )
-    return JsonResponse({"state": res.state, "pct": pct})
+        return JsonResponse({
+            "state": "SUCCESS",
+            "pct": 100,
+            "url": arch.get_download_url(),
+        })
+    return JsonResponse({"state": state, "pct": pct})
 
 
 class DownloadView(View):
