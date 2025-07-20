@@ -32,6 +32,12 @@ class Archive(models.Model):
                         blank=True,
                         related_name="archives",
                      )
+    qr_image        = models.ImageField(
+                        upload_to="qr_codes/",
+                        blank=True,
+                        null=True,
+                        verbose_name="QR-код"
+                    )
 
     def get_download_url(self) -> str:
         return reverse("download", args=[self.short_code])

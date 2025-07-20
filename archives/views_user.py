@@ -1,8 +1,10 @@
 import os
 import uuid
 import logging
-
+import zipfile
+from io import BytesIO
 from pathlib import Path
+
 from django.conf import settings
 from django.db.models import F
 from django.db import IntegrityError
@@ -11,6 +13,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy, reverse
 from django.contrib.auth.views import redirect_to_login
 from django.utils import timezone
+from django.utils.html import escape
 from django.views import View
 from django.views.generic import TemplateView, FormView, ListView, DetailView
 from celery.result import AsyncResult
@@ -22,6 +25,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
+from .utils import generate_qr_image
 from .forms import UploadForm
 from .models import Archive, FileItem, ClickLog
 from .tasks import build_zip
@@ -70,10 +74,14 @@ class UploadView(FormView):
         archive.build_task_id = task.id
         archive.save(update_fields=["build_task_id"])
         logger.debug("Triggered build_zip task_id=%s", task.id)
-
+        preview_url = self.request.build_absolute_uri(
+            reverse("download-page", args=[archive.short_code])
+        )
+        qr_file = generate_qr_image(preview_url)
+        archive.qr_image.save(f"{archive.short_code}.png", qr_file, save=True)
         wait_url = reverse("wait", args=[archive.short_code])
         logger.debug("Redirecting to %s", wait_url)
-        return redirect(wait_url)
+        return redirect(reverse("wait", args=[archive.short_code]))
 
 
 class WaitView(TemplateView):
@@ -142,47 +150,53 @@ class DownloadPageView(DetailView):
     slug_field = "short_code"
     slug_url_kwarg = "code"
 
-    def get_object(self):
+    def get_object(self, queryset=None):
         return get_object_or_404(
             Archive,
             short_code=self.kwargs["code"],
             deleted_at__isnull=True,
         )
 
+    def _zip_members(self, arch):
+        if not arch.zip_file:
+            return []
+        try:
+            with open(Path(settings.MEDIA_ROOT) / arch.zip_file.name, "rb") as fp:
+                with zipfile.ZipFile(BytesIO(fp.read())) as zf:
+                    return zf.namelist()
+        except FileNotFoundError:
+            return []
+        except zipfile.BadZipFile:
+            return []
+
     def get_context_data(self, **ctx):
         ctx = super().get_context_data(**ctx)
-        ctx["files"] = FileItem.objects.filter(archive=self.object)
-        zip_path = Path(settings.MEDIA_ROOT) / self.object.zip_file.name
-        ctx["file_exists"] = zip_path.exists()
+        arch = ctx["archive"]
+        ctx["files"]       = self._zip_members(arch)
+        ctx["file_exists"] = bool(arch.zip_file and Path(settings.MEDIA_ROOT, arch.zip_file.name).exists())
+        ctx["wait_needed"] = not arch.ready
         return ctx
 
 
 class DownloadView(View):
     def get(self, request, code):
         archive = get_object_or_404(
-            Archive.objects.filter(short_code=code, ready=True),
+            Archive,
+            short_code=code,
+            deleted_at__isnull=True,
+            ready=True,
         )
 
         if archive.expires_at and archive.expires_at < timezone.now():
-            raise Http404()
+            return HttpResponseForbidden("expired")
 
         if archive.password and request.GET.get("password", "") != archive.password:
-            return HttpResponseForbidden()
+            return HttpResponseForbidden("wrong password")
 
         if archive.max_downloads and archive.download_count >= archive.max_downloads:
-            return HttpResponseForbidden()
+            return HttpResponseForbidden("limit")
 
-        if archive.max_downloads:
-            ok = Archive.objects.filter(
-                pk=archive.pk,
-                download_count__lt=archive.max_downloads
-            ).update(download_count=F("download_count") + 1)
-            if not ok:
-                return HttpResponseForbidden()
-        else:
-            Archive.objects.filter(pk=archive.pk).update(
-                download_count=F("download_count") + 1
-            )
+        Archive.objects.filter(pk=archive.pk).update(download_count=F("download_count") + 1)
 
         ClickLog.objects.create(
             archive=archive,
@@ -194,11 +208,7 @@ class DownloadView(View):
         if not zip_path.exists():
             raise Http404()
 
-        return FileResponse(
-            open(zip_path, "rb"),
-            as_attachment=True,
-            filename=zip_path.name
-        )
+        return FileResponse(open(zip_path, "rb"), as_attachment=True, filename=zip_path.name)
 
 
 class DashboardView(LoginRequiredMixin, ListView):

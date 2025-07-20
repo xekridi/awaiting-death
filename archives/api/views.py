@@ -1,5 +1,7 @@
 import os
 from django.conf import settings
+from django.urls import reverse
+
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
@@ -7,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from .serializers import ArchiveSerializer
 from ..models import Archive, FileItem
+from ..utils import generate_qr_image
 from ..business.stats import get_downloads_by_day, get_top_referers
 
 class IsOwner(permissions.BasePermission):
@@ -48,6 +51,15 @@ class ArchiveViewSet(viewsets.ModelViewSet):
         FileItem.objects.filter(archive=archive).delete()
         archive.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    def perform_create(self, serializer):
+        archive = serializer.save()
+        request = self.request
+        preview_url = request.build_absolute_uri(
+            reverse("download-page", args=[archive.short_code])
+        )
+        qr_file = generate_qr_image(preview_url)
+        archive.qr_image.save(f"{archive.short_code}.png", qr_file, save=True)
 
 class StatsAPIView(APIView):
     def get(self, request, short_code):

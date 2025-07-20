@@ -4,13 +4,14 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from archives.models import Archive, FileItem
+from rest_framework.test import APIClient
 
 User = get_user_model()
 
 @pytest.fixture(autouse=True)
-def override_media_root(settings):
-    settings.MEDIA_ROOT = os.path.join(os.getcwd(), "test_media")
-    os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
+def override_media_root(tmp_path, settings):
+    settings.MEDIA_ROOT = str(tmp_path)
+    settings.MEDIA_URL = "/"
 
 @pytest.fixture
 def user(db):
@@ -37,3 +38,7 @@ def file_item(tmp_path, settings, archive):
     os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
     f = SimpleUploadedFile("a.txt", b"data")
     return FileItem.objects.create(archive=archive, file=f)
+
+@pytest.fixture
+def api_client():
+    return APIClient()

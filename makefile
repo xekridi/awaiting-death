@@ -1,5 +1,7 @@
 .SILENT:
 
+all: build test
+
 restart:
 	docker compose restart
 

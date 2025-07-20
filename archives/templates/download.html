@@ -1,30 +1,30 @@
-{% load static custom_filters %}
-<!doctype html>
-<html>
+{% extends "base.html" %}
+{% load humanize static custom_filters %}
 
-<head></head>
+{% block content %}
+<h2>Архив {{ archive.short_code }}</h2>
 
-<body>
-    <h2>Архив {{ archive.short_code }}</h2>
-    <p>{{ archive.description }}</p>
+{% if archive.qr_image %}
+<div class="mb-4">
+    <img src="{{ archive.qr_image.url }}" alt="QR {{ archive.short_code }}" width="160">
+</div>
+{% endif %}
 
-    {% if not file_exists %}
-    <p><em>Файл удалён</em></p>
-    {% else %}
-    <ul>
-        {% for f in files %}
-        <li>{{ f.file.name|basename }}</li>
-        {% endfor %}
-    </ul>
-    {% if archive.password %}
-    <form method="get" action="{% url 'download-file' archive.short_code %}">
-        <input name="password" placeholder="Пароль">
-        <button type="submit">Скачать</button>
-    </form>
-    {% else %}
-    <a href="{% url 'download-file' archive.short_code %}" class="btn">Скачать</a>
-    {% endif %}
-    {% endif %}
-</body>
-
-</html>
+{% if not archive.ready %}
+<div class="py-4 text-center">
+    <p>Пожалуйста, подождите, архив собирается…</p>
+</div>
+{% else %}
+<ul class="mb-4">
+    {% for item in files %}
+    <li>{{ item.file.name|basename }}</li>
+    {% endfor %}
+</ul>
+{% if not file_exists %}
+<p class="text-red-600">Файл удалён</p>
+{% endif %}
+<a href="{% url 'download-file' archive.short_code %}" class="btn btn-primary">
+    Скачать архив
+</a>
+{% endif %}
+{% endblock %}

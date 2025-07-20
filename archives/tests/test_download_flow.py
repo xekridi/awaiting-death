@@ -1,68 +1,127 @@
-from tempfile import NamedTemporaryFile
-from zipfile import ZipFile
+import os
+import zipfile
+import pytest
+from django.urls import reverse
+from django.utils import timezone
+from archives.models import Archive, ClickLog
 
-from django.contrib.staticfiles.testing import StaticLiveServerTestCase
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium import webdriver
+@pytest.fixture
+def zip_path(settings, tmp_path):
+    media_root = settings.MEDIA_ROOT
+    os.makedirs(media_root, exist_ok=True)
+    filename = "test_archive.zip"
+    path = os.path.join(media_root, filename)
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr("file1.txt", "hello")
+        zf.writestr("file2.txt", "world")
+    return filename, ["file1.txt", "file2.txt"]
 
-from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
+@pytest.mark.django_db
+def test_preview_wait(client):
+    arch = Archive.objects.create(
+        short_code="wait1",
+        ready=False,
+        max_downloads=0,
+    )
+    url = reverse("download-page", args=["wait1"])
+    resp = client.get(url)
+    assert resp.status_code == 200
+    assert "Пожалуйста, подождите" in resp.content.decode()
 
-class DownloadFlowSeleniumTest(StaticLiveServerTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        options = webdriver.ChromeOptions()
-        options.add_argument("--headless")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        cls.driver = webdriver.Chrome(
-            service=ChromeService(ChromeDriverManager().install()),
-            options=options
-        )
-        cls.driver.implicitly_wait(5)
+@pytest.mark.django_db
+def test_preview_ready_list_files(client, zip_path):
+    name, members = zip_path
+    arch = Archive.objects.create(
+        short_code="pr1",
+        ready=True,
+        max_downloads=0,
+    )
+    arch.zip_file.name = name
+    arch.save(update_fields=["zip_file"])
+    url = reverse("download-page", args=["pr1"])
+    resp = client.get(url)
+    content = resp.content.decode()
+    assert resp.status_code == 200
+    for m in members:
+        assert m in content
+    # есть кнопка или ссылка на скачивание
+    assert "Скачать" in content
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.driver.quit()
-        super().tearDownClass()
+@pytest.mark.django_db
+def test_preview_missing_file(client):
+    arch = Archive.objects.create(
+        short_code="miss1",
+        ready=True,
+        max_downloads=0,
+    )
+    arch.zip_file.name = "no_such.zip"
+    arch.save(update_fields=["zip_file"])
+    url = reverse("download-page", args=["miss1"])
+    resp = client.get(url)
+    assert resp.status_code == 200
+    assert "Файл удалён" in resp.content.decode()
 
-'''    def test_download_with_limit_and_password(self):
-        driver = self.driver
-        wait = WebDriverWait(driver, 10)
+@pytest.mark.django_db
+def test_download_no_password(client, zip_path):
+    name, _ = zip_path
+    arch = Archive.objects.create(
+        short_code="dl1",
+        ready=True,
+        max_downloads=0,
+        password="secret"
+    )
+    arch.zip_file.name = name
+    arch.save(update_fields=["zip_file"])
+    url = reverse("download-file", args=["dl1"])
+    resp = client.get(url)
+    assert resp.status_code == 403
 
-        driver.get(self.live_server_url + "/signup/")
-        driver.find_element(By.NAME, "username").send_keys("u1")
-        driver.find_element(By.NAME, "email").send_keys("u1@example.com")
-        driver.find_element(By.NAME, "password1").send_keys("pass12345")
-        driver.find_element(By.NAME, "password2").send_keys("pass12345")
-        driver.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
-        wait.until(EC.url_to_be(self.live_server_url + "/"))
+@pytest.mark.django_db
+def test_download_with_password(client, zip_path):
+    name, _ = zip_path
+    arch = Archive.objects.create(
+        short_code="dl2",
+        ready=True,
+        max_downloads=0,
+        password="pw"
+    )
+    arch.zip_file.name = name
+    arch.save(update_fields=["zip_file"])
+    url = reverse("download-file", args=["dl2"])
+    resp = client.get(f"{url}?password=pw")
+    assert resp.status_code == 200
+    assert "attachment" in resp["Content-Disposition"]
+    arch.refresh_from_db()
+    assert arch.download_count == 1
+    assert ClickLog.objects.filter(archive=arch).exists()
 
-        driver.find_element(By.LINK_TEXT, "Загрузить").click()
-        tmp = NamedTemporaryFile(suffix=".txt", delete=False)
-        tmp.write(b"hello")
-        tmp.flush()
-        driver.find_element(By.NAME, "files").send_keys(tmp.name)
-        driver.find_element(By.NAME, "description").send_keys("desc")
-        driver.find_element(By.NAME, "password1").send_keys("sec")
-        driver.find_element(By.NAME, "password2").send_keys("sec")
-        driver.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
+@pytest.mark.django_db
+def test_download_expired(client, zip_path):
+    name, _ = zip_path
+    arch = Archive.objects.create(
+        short_code="dl3",
+        ready=True,
+        max_downloads=0,
+        expires_at=timezone.now() - timezone.timedelta(hours=1)
+    )
+    arch.zip_file.name = name
+    arch.save(update_fields=["zip_file"])
+    url = reverse("download-file", args=["dl3"])
+    resp = client.get(url)
+    assert resp.status_code == 403
 
-        wait.until(EC.text_to_be_present_in_element((By.TAG_NAME, "h4"), "Ваш архив собирается"))
+@pytest.mark.django_db
+def test_download_limit(client, zip_path):
+    name, _ = zip_path
+    arch = Archive.objects.create(
+        short_code="dl4",
+        ready=True,
+        max_downloads=1,
+    )
+    arch.zip_file.name = name
+    arch.download_count = 1
+    arch.save(update_fields=["zip_file", "download_count"])
+    url = reverse("download-file", args=["dl4"])
+    resp = client.get(url)
+    assert resp.status_code == 403
 
-        driver.execute_script("""
-            fetch("/api/archives/" + window.location.pathname.split("/")[2] + "/stats/", {
-                method: "PATCH",
-                headers: {"Content-Type":"application/json"},
-                body: JSON.stringify({ready:true, max_downloads:1, password:"sec"})
-            });
-        """)
-
-        wait.until(EC.url_contains("/d/"))
-        driver.get(driver.current_url.split("?")[0])
-        assert "403" in driver.page_source
-        driver.get(driver.current_url + "?password=sec")
-        assert "Forbidden" not in driver.page_source'''

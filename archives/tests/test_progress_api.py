@@ -36,10 +36,6 @@ class DummyResult:
     def info(self):
         return self._info
 
-@pytest.fixture(autouse=True)
-def patch_asyncresult(monkeypatch):
-    monkeypatch.setattr(AsyncResult, "__new__", lambda cls, tid: DummyResult({"pct": 42}))
-
 def test_wait_progress_returns_pct(client, archive_not_ready):
     url = reverse("wait-progress", args=[archive_not_ready.short_code])
     response = client.get(url)
