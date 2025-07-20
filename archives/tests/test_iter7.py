@@ -21,12 +21,11 @@ class TestUIAndAccounts:
 
     def test_upload_and_wait(self, client):
         url = reverse('upload')
-        testfile = SimpleUploadedFile('f.txt', b'hello world')
         response = client.post(
             url,
             {
                 'description': 'Desc',
-                'files': testfile,
+                'files': SimpleUploadedFile('f.txt', b'hello world'),
                 'password1': '',
                 'password2': '',
             },

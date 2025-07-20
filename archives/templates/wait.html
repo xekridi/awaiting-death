@@ -1,24 +1,28 @@
 {% extends "base.html" %}
 {% block content %}
 <h3>Архив собирается…</h3>
+
 <progress id="buildProgress" value="0" max="100" style="width:100%;"></progress>
 
 <script>
     (() => {
-        const progressUrl = "{% url 'wait-progress' archive.short_code %}";
-        const downloadUrl = "{% url 'download' archive.short_code %}";
+        const code = "{{ archive.short_code }}";
         const bar = document.getElementById("buildProgress");
 
         const poll = () => {
-            fetch(progressUrl)
+            fetch(`/wait/${code}/progress/`)
                 .then(r => r.json())
                 .then(d => {
                     bar.value = d.pct;
-                    if (d.pct < 100) setTimeout(poll, 1000);
-                    else window.location = downloadUrl;
+                    if (d.pct < 100) {
+                        setTimeout(poll, 1000);
+                    } else {
+                        window.location = `/d/${code}/`;
+                    }
                 })
                 .catch(() => setTimeout(poll, 1000));
         };
+
         poll();
     })();
 </script>

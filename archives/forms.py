@@ -11,10 +11,10 @@ class UploadForm(forms.Form):
         max_length=255, required=False, label="Описание"
     )
 
-    files         = forms.FileField(
+    files = forms.FileField(
         widget=MultiFileInput(attrs={"multiple": True}),
         required=True,
-        label="Файлы (можно несколько)",
+        label="Файлы (можно выбрать несколько)",
     )
 
     password1     = forms.CharField(
@@ -23,6 +23,7 @@ class UploadForm(forms.Form):
     password2     = forms.CharField(
         widget=forms.PasswordInput, required=False, label="Повтор пароля"
     )
+
     max_downloads = forms.IntegerField(
         min_value=0, required=False, label="Макс. скачиваний"
     )
@@ -33,7 +34,8 @@ class UploadForm(forms.Form):
     def clean(self):
         cleaned = super().clean()
 
-        if not self.files.getlist("files"):
+        files = self.files.getlist("files")
+        if not files:
             self.add_error("files", "Нужно выбрать хотя бы один файл")
 
         p1, p2 = cleaned.get("password1"), cleaned.get("password2")

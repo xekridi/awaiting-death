@@ -48,12 +48,11 @@ def test_get_upload_page(client):
 
 def test_post_valid_upload_redirects_to_wait(client):
     url = reverse("upload")
-    f = SimpleUploadedFile("a.txt", b"data")
     resp = client.post(
         url,
         {
             "description": "foo",
-            "files": f,
+            "files": SimpleUploadedFile("a.txt", b"data"),
             "password1": "",
             "password2": "",
         },

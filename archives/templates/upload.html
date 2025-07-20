@@ -1,20 +1,44 @@
 {% extends "base.html" %}
 {% block content %}
 <h3>Загрузить архив</h3>
-<form id="uploadForm" method="post" action="{% url 'upload' %}" enctype="multipart/form-data">
+
+<form id="uploadForm" action="{% url 'upload' %}" method="post" enctype="multipart/form-data" class="vstack gap-3">
     {% csrf_token %}
     {{ form.non_field_errors }}
-    <div>{{ form.description.label_tag }} {{ form.description }} {{ form.description.errors }}</div>
-    <div>{{ form.files.label_tag }} {{ form.files }} {{ form.files.errors }}</div>
+
+    <div>
+        {{ form.description.label_tag }}
+        {{ form.description }}
+        {{ form.description.errors }}
+    </div>
+
+    <div>
+        {{ form.files.label_tag }}
+        {{ form.files }}
+        {{ form.files.errors }}
+        <small>Удерживайте Ctrl/⌘, чтобы выбрать несколько</small>
+    </div>
+
     <div>
         {{ form.password1.label_tag }} {{ form.password1 }}
-        {{ form.password2.label_tag }} {{ form.password2 }} {{ form.password2.errors }}
+        {{ form.password2.label_tag }} {{ form.password2 }}
+        {{ form.password2.errors }}
     </div>
-    <div>{{ form.max_downloads.label_tag }} {{ form.max_downloads }} {{ form.max_downloads.errors }}</div>
-    <div>{{ form.expires_at.label_tag }} {{ form.expires_at }} {{ form.expires_at.errors }}</div>
+
+    <div>
+        {{ form.max_downloads.label_tag }} {{ form.max_downloads }}
+        {{ form.max_downloads.errors }}
+    </div>
+
+    <div>
+        {{ form.expires_at.label_tag }} {{ form.expires_at }}
+        {{ form.expires_at.errors }}
+    </div>
+
     <button class="btn btn-primary" type="submit">Собрать ZIP</button>
 </form>
-<progress id="uploadProgress" value="0" max="100" style="display:none;width:100%;"></progress>
+
+<progress id="uploadProgress" value="0" max="100" style="display:none;width:100%;margin-top:1rem;"></progress>
 
 <script>
     (() => {
@@ -36,17 +60,6 @@
             const loc = resp.headers.get('Location');
             if (loc) {
                 window.location = loc;
-                return;
-            }
-
-            if (resp.type === 'opaqueredirect' || resp.status === 302 || resp.status === 303) {
-                window.location = form.action.replace('upload', 'wait') + '/';
-                return;
-            }
-
-            if (resp.ok) {
-                const text = await resp.text();
-                document.open(); document.write(text); document.close();
                 return;
             }
 

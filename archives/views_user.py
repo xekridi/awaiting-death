@@ -28,7 +28,8 @@ from .business.stats import get_downloads_by_day, get_top_referers
 
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("archives.views_user")
+logger.setLevel(logging.DEBUG)
 
 class HomePage(TemplateView):
     template_name = "home.html"
@@ -38,10 +39,29 @@ class UploadView(FormView):
     template_name = "upload.html"
     form_class    = UploadForm
 
+    def post(self, request, *args, **kwargs):
+        logger.debug("=== UploadView.POST start ===")
+        logger.debug("Headers: %s", dict(request.headers))
+        logger.debug("POST keys: %s", list(request.POST.keys()))
+        logger.debug("FILES keys: %s", list(request.FILES.keys()))
+
+        
+        uploaded = request.POST.get("files")
+        if not request.FILES.getlist("files") and isinstance(uploaded, UploadedFile):
+            request.FILES.setlist("files", [uploaded])
+            logger.debug("Moved UploadedFile from POST to FILES")
+
+        return super().post(request, *args, **kwargs)
+
+    def form_invalid(self, form):
+        logger.debug("=== UploadView.form_invalid ===")
+        logger.debug("Form errors: %s", form.errors.as_json())
+        return super().form_invalid(form)
+
     def form_valid(self, form):
         cd   = form.cleaned_data
         code = uuid.uuid4().hex[:10]
-        logger.debug("form_valid: code=%s user=%s", code, self.request.user)
+        logger.debug("=== UploadView.form_valid === code=%s", code)
 
         archive = Archive.objects.create(
             short_code    = code,
@@ -52,17 +72,20 @@ class UploadView(FormView):
             owner         = self.request.user if self.request.user.is_authenticated else None,
             ready         = False,
         )
+        logger.debug("Archive created id=%s owner=%r", archive.id, archive.owner)
 
-        for f in self.request.FILES.getlist("files"):
+        files = self.request.FILES.getlist("files")
+        logger.debug("Saving %d files: %s", len(files), [f.name for f in files])
+        for f in files:
             FileItem.objects.create(archive=archive, file=f)
 
-        res = build_zip.apply_async((archive.id,))
-        archive.build_task_id = res.id
+        task = build_zip.apply_async((archive.id,))
+        archive.build_task_id = task.id
         archive.save(update_fields=["build_task_id"])
-        logger.debug("Triggered build_zip task_id=%s", res.id)
+        logger.debug("Triggered build_zip task_id=%s", task.id)
 
         wait_url = reverse("wait", args=[archive.short_code])
-
+        logger.debug("Redirecting to %s", wait_url)
         return redirect(wait_url)
 
 
@@ -70,61 +93,49 @@ class WaitView(TemplateView):
     template_name = "wait.html"
 
     def get_context_data(self, **kwargs):
-        return {"archive": get_object_or_404(
-            Archive, short_code=kwargs["code"], deleted_at__isnull=True
-        )}
+        code = kwargs.get("code")
+        logger.debug("=== WaitView.get_context_data === code=%s", code)
+        archive = get_object_or_404(Archive, short_code=code, deleted_at__isnull=True)
+        logger.debug("Archive ready=%s", archive.ready)
+        return {"archive": archive}
 
 
 def wait_progress(request, code):
-    try:
-        arch = Archive.objects.get(short_code=code, deleted_at__isnull=True)
-    except Archive.DoesNotExist:
+    logger.debug("=== wait_progress === code=%s user=%r", code, request.user)
+    archive = get_object_or_404(Archive, short_code=code, deleted_at__isnull=True)
+
+    if archive.owner:
         if not request.user.is_authenticated:
+            from django.contrib.auth.views import redirect_to_login
+            logger.debug("wait_progress: redirect to login")
             return redirect_to_login(request.get_full_path())
-        raise Http404
+        if request.user != archive.owner:
+            logger.debug("wait_progress: wrong owner -> 404")
+            raise Http404()
 
-    if arch.owner is None:
-        pct = (AsyncResult(arch.build_task_id).info or {}).get("pct", 0)
-        return JsonResponse({"pct": pct})
-
-    if not request.user.is_authenticated:
-        return redirect_to_login(request.get_full_path())
-    if arch.owner_id != request.user.id:
-        raise Http404
-
-    if arch.ready:
-        return JsonResponse({
-            "state": "SUCCESS",
-            "pct": 100,
-            "url": arch.get_download_url(),
-        })
-    if arch.error:
-        return JsonResponse({
-            "state": "FAILURE",
-            "pct": 0,
-            "message": arch.error,
-        })
-    if not arch.build_task_id:
+    if archive.ready:
+        return JsonResponse({"state": "SUCCESS", "pct": 100, "url": archive.get_download_url()})
+    if archive.error:
+        return JsonResponse({"state": "FAILURE", "pct": 0, "message": archive.error})
+    if not archive.build_task_id:
         return JsonResponse({"state": "PENDING", "pct": 0})
 
-    res = AsyncResult(arch.build_task_id)
+    res = AsyncResult(archive.build_task_id)
+    logger.debug("Celery state=%s info=%r", res.state, res.info)
+
     if res.failed():
         info = res.info or {}
-        msg = info.get("exc") if isinstance(info, dict) and "exc" in info else str(info)
+        msg = info.get("exc") if isinstance(info, dict) else str(info)
         return JsonResponse({"state": "FAILURE", "pct": 0, "message": msg})
 
-    state = res.state
-    pct   = (res.info or {}).get("pct", 0)
-    if state == "SUCCESS":
-        if not arch.ready:
-            arch.ready = True
-            arch.save(update_fields=["ready"])
-        return JsonResponse({
-            "state": "SUCCESS",
-            "pct": 100,
-            "url": arch.get_download_url(),
-        })
-    return JsonResponse({"state": state, "pct": pct})
+    pct = (res.info or {}).get("pct", 0)
+    if res.state == "SUCCESS":
+        if not archive.ready:
+            archive.ready = True
+            archive.save(update_fields=["ready"])
+        return JsonResponse({"state": "SUCCESS", "pct": 100, "url": archive.get_download_url()})
+
+    return JsonResponse({"state": res.state, "pct": pct})
 
 
 class DownloadView(View):
