@@ -31,7 +31,7 @@ class HomePage(TemplateView):
     template_name = "home.html"
 
 
-class UploadView(FormView):
+class UploadView(LoginRequiredMixin, FormView):
     template_name = "upload.html"
     form_class    = UploadForm
 
@@ -70,14 +70,11 @@ class UploadView(FormView):
 
 class WaitView(TemplateView):
     template_name = "wait.html"
-    login_url = reverse_lazy("login")
-
+    
     def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx["archive"] = get_object_or_404(
-            Archive, short_code=kwargs["code"]
-        )
-        return ctx
+        return {"archive": get_object_or_404(
+            Archive, short_code=kwargs["code"], deleted_at__isnull=True
+        )}
 
 
 def wait_progress(request, code):

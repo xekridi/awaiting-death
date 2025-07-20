@@ -3,8 +3,8 @@ from .views import SignUpView, CustomLoginView, CustomLogoutView
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
-    path("signup/", SignUpView.as_view(),      name="signup"),
-    path("login/",  CustomLoginView.as_view(), name="login"),
+    path("signup/", SignUpView.as_view(),       name="signup"),
+    path("login/",  CustomLoginView.as_view(),  name="login"),
     path("logout/", CustomLogoutView.as_view(), name="logout"),
 
     path("password_change/",         auth_views.PasswordChangeView.as_view(),         name="password_change"),

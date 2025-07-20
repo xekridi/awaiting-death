@@ -3,6 +3,10 @@
 {% block content %}
 <h3>Загрузить архив</h3>
 
+{% extends "base.html" %}
+{% block content %}
+<h3>Загрузить архив</h3>
+
 <form id="uploadForm" enctype="multipart/form-data" class="vstack gap-3">
     {% csrf_token %}
     <div>
@@ -24,6 +28,11 @@
         {{ form.max_downloads.label_tag }}
         {{ form.max_downloads }}
         {{ form.max_downloads.errors }}
+    </div>
+    <div>
+        {{ form.expires_at.label_tag }}
+        {{ form.expires_at }}
+        {{ form.expires_at.errors }}
     </div>
     <div>
         {{ form.files.label_tag }}

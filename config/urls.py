@@ -9,19 +9,21 @@ from archives.views_user import (
 def health(request):
     return HttpResponse("OK")
 
+
 urlpatterns = [
     path("health/", health, name="health"),
-    path("admin/", admin.site.urls),
+    path("admin/",  admin.site.urls),
 
     path("", include("accounts.urls")),
 
-    path("", HomePage.as_view(), name="home"),
-    path("upload/", UploadView.as_view(), name="upload"),
-    path("wait/<str:code>/", WaitView.as_view(), name="wait"),
-    path("wait/<str:code>/progress/", wait_progress, name="wait-progress"),
-    path("dashboard/", DashboardView.as_view(), name="dashboard"),
-    path("d/<str:code>/", DownloadView.as_view(), name="download"),
-    path("stats/<str:short_code>/", StatsPageView.as_view(), name="stats"),
+    path("",                              HomePage.as_view(),      name="home"),
+    path("upload/",                       UploadView.as_view(),    name="upload"),
+    path("wait/<str:code>/",              WaitView.as_view(),      name="wait"),
+    path("wait/<str:code>/progress/",     wait_progress,           name="wait-progress"),
+
+    path("dashboard/",                    DashboardView.as_view(), name="dashboard"),
+    path("d/<str:code>/",                 DownloadView.as_view(),  name="download"),
+    path("stats/<str:short_code>/",       StatsPageView.as_view(), name="stats"),
 
     path("api/", include("archives.api.urls")),
 ]
