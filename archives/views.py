@@ -18,47 +18,49 @@ from .models import Archive, ClickLog
 from .business.stats import get_downloads_by_day, get_top_referers
 
 
-class DashboardView(LoginRequiredMixin, ListView):
-    model = Archive
-    template_name = "dashboard.html"
-    context_object_name = "archives"
-    login_url = "login"
-
-    def get_queryset(self):
-        return Archive.objects.filter(owner=self.request.user, deleted_at__isnull=True)
-
-
 class DownloadView(View):
     template_name = "download.html"
 
     def get(self, request, code):
+        archive = self._get_archive_or_404(code)
+
+        if archive.password and not request.session.get(self._session_key(archive)):
+            return render(request, self.template_name, {"archive": archive})
+
+        return self._serve_file(request, archive)
+
+    def post(self, request, code):
+        archive = self._get_archive_or_404(code)
+
+        if archive.password:
+            pwd = request.POST.get("password", "")
+            if not archive.check_password(pwd):
+                return render(request, self.template_name, {"archive": archive, "error": "Неверный пароль"})
+            request.session[self._session_key(archive)] = True
+
+        return self._serve_file(request, archive)
+
+    def _get_archive_or_404(self, code):
         archive = get_object_or_404(Archive, short_code=code, ready=True)
         if archive.expires_at and archive.expires_at < timezone.now():
             raise Http404
         if archive.max_downloads and archive.download_count >= archive.max_downloads:
-            return HttpResponseForbidden
-        if archive.password:
-            pwd = request.GET.get("password")
-            if not pwd:
-                return render(request, self.template_name, {"archive": archive})
-            if pwd != archive.password:
-                return HttpResponseForbidden
-        Archive.objects.filter(pk=archive.pk).update(
-            download_count=F("download_count") + 1
-        )
-        ClickLog.objects.create(
-            archive=archive,
-            referer=request.META.get("HTTP_REFERER", ""),
-            ip_address=request.META.get("REMOTE_ADDR", ""),
-        )
-        file_path = archive.zip_file.path
-        if not os.path.exists(file_path):
-            raise Http404
-        return FileResponse(
-            open(file_path, "rb"),
-            as_attachment=True,
-            filename=os.path.basename(file_path),
-        )
+            raise HttpResponseForbidden
+        return archive
+
+    def _session_key(self, archive):
+        return f"download_access_{archive.pk}"
+
+    def _serve_file(self, request, archive):
+        filepath = archive.zip_file.path
+        filename = f"{archive.name}.zip"
+        response = FileResponse(open(filepath, "rb"), as_attachment=True, filename=filename)
+        archive.download_count += 1
+        archive.save(update_fields=["download_count"])
+        return response
+
+
+
 
 
 class StatsAPIView(APIView):

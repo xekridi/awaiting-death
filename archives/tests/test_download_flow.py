@@ -44,7 +44,6 @@ def test_preview_ready_list_files(client, zip_path):
     assert resp.status_code == 200
     for m in members:
         assert m in content
-    # есть кнопка или ссылка на скачивание
     assert "Скачать" in content
 
 @pytest.mark.django_db

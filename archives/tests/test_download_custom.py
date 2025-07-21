@@ -56,3 +56,10 @@ def test_limit_and_password(tmp_path, client, settings):
     assert resp.status_code == 200
     resp = client.get(url + "?password=sec")
     assert resp.status_code == 403
+
+@pytest.mark.django_db
+def test_download_password(client, archive_with_password):
+    response = client.post(f"/d/{archive_with_password.short_code}/", {"password": "secret"}, follow=True)
+    assert response.status_code == 200
+    response = client.get(f"/d/{archive_with_password.short_code}/")
+    assert response.status_code == 200

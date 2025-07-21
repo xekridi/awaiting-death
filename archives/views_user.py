@@ -179,36 +179,40 @@ class DownloadPageView(DetailView):
 
 
 class DownloadView(View):
+    template_name = "download.html"
+
     def get(self, request, code):
-        archive = get_object_or_404(
-            Archive,
-            short_code=code,
-            deleted_at__isnull=True,
-            ready=True,
-        )
+        archive = get_object_or_404(Archive, short_code=code, ready=True)
 
         if archive.expires_at and archive.expires_at < timezone.now():
-            return HttpResponseForbidden("expired")
+            return HttpResponseForbidden()
 
-        if archive.password and request.GET.get("password", "") != archive.password:
-            return HttpResponseForbidden("wrong password")
+        if archive.password:
+            pwd = request.GET.get("password")
+            if pwd is None:
+                return render(request, self.template_name, {"archive": archive})
+            if not archive.check_password(pwd):
+                return HttpResponseForbidden()
 
         if archive.max_downloads and archive.download_count >= archive.max_downloads:
-            return HttpResponseForbidden("limit")
+            return HttpResponseForbidden()
 
-        Archive.objects.filter(pk=archive.pk).update(download_count=F("download_count") + 1)
-
-        ClickLog.objects.create(
-            archive=archive,
-            referer=request.META.get("HTTP_REFERER", ""),
-            ip_address=request.META.get("REMOTE_ADDR", ""),
-        )
-
-        zip_path = Path(settings.MEDIA_ROOT) / archive.zip_file.name
-        if not zip_path.exists():
+        path = archive.zip_file.path
+        if not os.path.exists(path):
             raise Http404()
 
-        return FileResponse(open(zip_path, "rb"), as_attachment=True, filename=zip_path.name)
+        resp = FileResponse(open(path, "rb"), as_attachment=True, filename=f"{archive.name}.zip")
+        archive.download_count += 1
+        archive.save(update_fields=["download_count"])
+        ClickLog.objects.create(
+            archive=archive,
+            ip=request.META.get("REMOTE_ADDR", ""),
+            user_agent=request.META.get("HTTP_USER_AGENT", ""),
+        )
+        return resp
+
+    def post(self, request, code):
+        return self.get(request, code)
 
 
 class DashboardView(LoginRequiredMixin, ListView):
@@ -252,4 +256,29 @@ class StatsAPIView(APIView):
         return Response({
             "by_day": get_downloads_by_day(short_code),
             "top_referers": get_top_referers(short_code),
+        })
+
+class PreviewView(View):
+    template_name = "preview.html"
+
+    def get(self, request, code):
+        archive = get_object_or_404(Archive, short_code=code)
+        if not archive.ready:
+            return render(request, self.template_name, {"archive": archive})
+        
+        zip_path = archive.zip_file.path
+        if not os.path.exists(zip_path):
+            return render(request, self.template_name, {
+                "archive": archive,
+                "files": [],
+                "file_exists": False,
+            })
+
+        with zipfile.ZipFile(zip_path) as zf:
+            files = zf.namelist()
+
+        return render(request, self.template_name, {
+            "archive": archive,
+            "files": files,
+            "file_exists": True,
         })

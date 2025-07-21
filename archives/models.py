@@ -2,6 +2,7 @@ from django.db import models
 from django.utils import timezone
 from django.conf import settings
 from django.urls import reverse
+from django.contrib.auth.hashers import make_password, check_password
 import uuid
 
 
@@ -11,7 +12,7 @@ def default_expiry():
 class Archive(models.Model):
     id              = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     short_code      = models.CharField(max_length=10, unique=True)
-    password        = models.CharField(max_length=128, blank=True)
+    password        = models.CharField(max_length=128, blank=True, help_text="Hashed archive password")
     max_downloads   = models.PositiveIntegerField(default=0)
     download_count  = models.PositiveIntegerField(default=0)
     created_at      = models.DateTimeField(auto_now_add=True)
@@ -38,6 +39,19 @@ class Archive(models.Model):
                         null=True,
                         verbose_name="QR-код"
                     )
+
+    def set_password(self, raw_password: str | None) -> None:
+            self.password = make_password(raw_password) if raw_password else ""
+
+    def check_password(self, raw_password: str | None) -> bool:
+        if not self.password:
+            return True
+        return check_password(raw_password or "", self.password)
+
+    def save(self, *args, **kwargs):
+        if self.password and not self.password.startswith("pbkdf2_"):
+            self.password = make_password(self.password)
+        super().save(*args, **kwargs)
 
     def get_download_url(self) -> str:
         return reverse("download", args=[self.short_code])

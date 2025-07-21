@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load humanize static custom_filters %}
+
+{% block title %}Архив {{ archive.name }}{% endblock %}
+
+{% block content %}
+<h2>Архив {{ archive.short_code }}</h2>
+
+{% if archive.qr_image %}
+<img src="{{ archive.qr_image.url }}" width="160" alt="QR">
+{% endif %}
+
+{% if not archive.ready %}
+<p>Пожалуйста, подождите, архив собирается…</p>
+{% else %}
+<ul>
+    {% for f in files %}
+    <li>{{ f }}</li>
+    {% endfor %}
+</ul>
+{% if not file_exists %}
+<p class="text-red-600">Файл удалён</p>
+{% endif %}
+<a href="{% url 'download-file' archive.short_code %}">Скачать {{ archive.name }}.zip</a>
+{% endif %}
+{% endblock %}
