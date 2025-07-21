@@ -16,6 +16,7 @@ test_media/
 staticfiles/
 uploads/
 zips/
+qr_codes/
 
 */migrations/*.py[cod]
 
