@@ -12,6 +12,7 @@ def default_expiry():
 class Archive(models.Model):
     id              = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     short_code      = models.CharField(max_length=10, unique=True)
+    name            = models.CharField(max_length=120)
     password        = models.CharField(max_length=128, blank=True, help_text="Hashed archive password")
     max_downloads   = models.PositiveIntegerField(default=0)
     download_count  = models.PositiveIntegerField(default=0)
@@ -49,6 +50,8 @@ class Archive(models.Model):
         return check_password(raw_password or "", self.password)
 
     def save(self, *args, **kwargs):
+        if not self.name:
+            self.name = self.short_code
         if self.password and not self.password.startswith("pbkdf2_"):
             self.password = make_password(self.password)
         super().save(*args, **kwargs)
@@ -66,7 +69,7 @@ class FileItem(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
 class ClickLog(models.Model):
-    archive    = models.ForeignKey(Archive, on_delete=models.CASCADE, related_name="clicks")
-    timestamp  = models.DateTimeField(default=timezone.now)
-    ip_address = models.GenericIPAddressField()
-    referer    = models.URLField(blank=True)
+    archive     = models.ForeignKey(Archive, on_delete=models.CASCADE, related_name="clicks")
+    timestamp   = models.DateTimeField(default=timezone.now)
+    ip_address  = models.GenericIPAddressField()
+    referer     = models.URLField(blank=True)

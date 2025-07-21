@@ -5,7 +5,7 @@ from archives.models import Archive, ClickLog
 
 @pytest.mark.django_db
 def test_downloads_by_day_and_top_referers():
-    arch = Archive.objects.create(short_code="S1", expires_at=timezone.now() + timezone.timedelta(days=1))
+    arch = Archive.objects.create(name="name", short_code="S1", expires_at=timezone.now() + timezone.timedelta(days=1))
     now = timezone.now()
     for _ in range(3):
         ClickLog.objects.create(archive=arch, timestamp=now, ip_address="1.1.1.1", referer="a")

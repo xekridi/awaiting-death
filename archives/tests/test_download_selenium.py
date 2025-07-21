@@ -37,12 +37,14 @@ class DownloadFlowSeleniumTest(StaticLiveServerTestCase):
         os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
 
         self.wait_arch = Archive.objects.create(
+            name="name", 
             short_code="sel-wait",
             ready=False,
             max_downloads=0
         )
 
         self.ready_arch = Archive.objects.create(
+            name="name", 
             short_code="sel-ready",
             ready=True,
             max_downloads=0,

@@ -12,6 +12,7 @@ def api_client():
 @pytest.fixture
 def archive_data():
     return {
+        "name": "name",
         "short_code": "XYZ789",
         "max_downloads": 3,
         "expires_at": (timezone.now() + timezone.timedelta(days=1)).isoformat(),
@@ -20,7 +21,8 @@ def archive_data():
 @pytest.mark.django_db
 def test_create_archive(api_client, archive_data):
     url = reverse("archive-list")
-    resp = api_client.post(url, archive_data, format="json")
+    data = {**archive_data, "name": "MyArchive"}
+    resp = api_client.post(url, data, format="json")
     assert resp.status_code == status.HTTP_201_CREATED
     assert Archive.objects.filter(short_code="XYZ789").exists()
 

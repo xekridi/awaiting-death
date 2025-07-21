@@ -19,6 +19,7 @@ def zip_path(settings, tmp_path):
 @pytest.mark.django_db
 def test_preview_wait(client):
     arch = Archive.objects.create(
+        name="name", 
         short_code="wait1",
         ready=False,
         max_downloads=0,
@@ -49,6 +50,7 @@ def test_preview_ready_list_files(client, zip_path):
 @pytest.mark.django_db
 def test_preview_missing_file(client):
     arch = Archive.objects.create(
+        name="name", 
         short_code="miss1",
         ready=True,
         max_downloads=0,
@@ -64,12 +66,12 @@ def test_preview_missing_file(client):
 def test_download_no_password(client, zip_path):
     name, _ = zip_path
     arch = Archive.objects.create(
+        name="name", 
         short_code="dl1",
         ready=True,
         max_downloads=0,
         password="secret"
     )
-    arch.zip_file.name = name
     arch.save(update_fields=["zip_file"])
     url = reverse("download-file", args=["dl1"])
     resp = client.get(url)
@@ -79,12 +81,13 @@ def test_download_no_password(client, zip_path):
 def test_download_with_password(client, zip_path):
     name, _ = zip_path
     arch = Archive.objects.create(
+        name="name", 
         short_code="dl2",
         ready=True,
         max_downloads=0,
         password="pw"
     )
-    arch.zip_file.name = name
+    arch.zip_file.name = name 
     arch.save(update_fields=["zip_file"])
     url = reverse("download-file", args=["dl2"])
     resp = client.get(f"{url}?password=pw")
@@ -103,7 +106,6 @@ def test_download_expired(client, zip_path):
         max_downloads=0,
         expires_at=timezone.now() - timezone.timedelta(hours=1)
     )
-    arch.zip_file.name = name
     arch.save(update_fields=["zip_file"])
     url = reverse("download-file", args=["dl3"])
     resp = client.get(url)
@@ -113,11 +115,11 @@ def test_download_expired(client, zip_path):
 def test_download_limit(client, zip_path):
     name, _ = zip_path
     arch = Archive.objects.create(
+        name="name",
         short_code="dl4",
         ready=True,
         max_downloads=1,
     )
-    arch.zip_file.name = name
     arch.download_count = 1
     arch.save(update_fields=["zip_file", "download_count"])
     url = reverse("download-file", args=["dl4"])

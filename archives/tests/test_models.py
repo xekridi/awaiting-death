@@ -5,6 +5,7 @@ from archives.models import Archive, FileItem
 @pytest.mark.django_db
 def test_archive_and_fileitem_creation(tmp_path, settings):
     arch = Archive.objects.create(
+        name="name", 
         short_code="ABC123",
         max_downloads=5,
         expires_at=timezone.now() + timezone.timedelta(days=1)

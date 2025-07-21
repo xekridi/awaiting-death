@@ -23,6 +23,7 @@ def test_signup_login_upload_wait_flow(client):
     response = client.post(
         up_url,
         {
+            'name':'name',
             "description": "test",
             "files": SimpleUploadedFile("f.txt", b"hi"),
             "password1": "",
@@ -52,6 +53,7 @@ def test_post_valid_upload_redirects_to_wait(client):
     resp = client.post(
         url,
         {
+            'name':'name',
             "description": "foo",
             "files": SimpleUploadedFile("a.txt", b"data"),
             "password1": "",

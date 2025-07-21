@@ -5,6 +5,11 @@
 <form id="uploadForm" action="{% url 'upload' %}" method="post" enctype="multipart/form-data" class="vstack gap-3">
     {% csrf_token %}
     {{ form.non_field_errors }}
+    <div>
+        {{ form.name.label_tag }}
+        {{ form.name }}
+        {{ form.name.errors }}
+    </div>
 
     <div>
         {{ form.description.label_tag }}

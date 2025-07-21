@@ -6,7 +6,7 @@ from archives.models import Archive, ClickLog
 
 @pytest.mark.django_db
 def test_archive_stats_api(client):
-    Archive.objects.create(short_code="API1", expires_at=timezone.now() + timezone.timedelta(days=1))
+    Archive.objects.create(name="API", short_code="API1", expires_at=timezone.now() + timezone.timedelta(days=1))
     now = timezone.now()
     arch = Archive.objects.get(short_code="API1")
     ClickLog.objects.create(archive=arch, timestamp=now, ip_address="1.1.1.1", referer="r1")

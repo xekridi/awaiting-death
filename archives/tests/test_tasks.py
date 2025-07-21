@@ -15,6 +15,7 @@ def test_build_zip_idempotent(tmp_path, settings):
     settings.DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 
     arch = Archive.objects.create(
+        name="name", 
         short_code="XX",
         ready=False,
         expires_at=timezone.now() + timezone.timedelta(days=1),

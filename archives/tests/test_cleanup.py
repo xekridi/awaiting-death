@@ -10,6 +10,7 @@ def test_cleanup_task(tmp_path, settings):
     zf = tmp_path / "zips" / "old.zip"
     zf.write_bytes(b"PK\x05\x06")
     arch = Archive.objects.create(
+        name="name", 
         short_code="OLD",
         expires_at=timezone.now() - timezone.timedelta(days=1),
         ready=True,

@@ -26,10 +26,22 @@ def client_logged_in(client, user):
 @pytest.fixture
 def archive(db, user):
     return Archive.objects.create(
+        name="name", 
         short_code="c1",
         owner=user,
         ready=False,
         max_downloads=0,
+    )
+
+@pytest.fixture
+def archive_with_password(db, user):
+    return Archive.objects.create(
+        name="name", 
+        short_code="c1",
+        owner=user,
+        ready=False,
+        max_downloads=0,
+        password="secret",
     )
 
 @pytest.fixture

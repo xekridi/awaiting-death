@@ -24,6 +24,7 @@ class TestUIAndAccounts:
         response = client.post(
             url,
             {
+                'name':'name',
                 'description': 'Desc',
                 'files': SimpleUploadedFile('f.txt', b'hello world'),
                 'password1': '',
@@ -50,6 +51,7 @@ class TestUIAndAccounts:
     def test_download_view(self, client, settings, tmp_path):
         user = User.objects.create_user('u', 'u@example.com', 'pw')
         archive = Archive.objects.create(
+            name="name", 
             description='d',
             short_code='code123',
             ready=True,

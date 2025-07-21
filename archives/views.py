@@ -1,85 +1,68 @@
-# archives/views.py
-
 import os
-from django.conf import settings
-from django.shortcuts import get_object_or_404, render
-from django.http import FileResponse, HttpResponseForbidden, Http404
-from django.db.models import F
+
+from django.http import Http404, HttpResponseForbidden, FileResponse
+from django.shortcuts import get_object_or_404, render, redirect
 from django.utils import timezone
+from django.db.models import F
 from django.views import View
-from django.views.generic import ListView, TemplateView
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-
-from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Archive, ClickLog
-from .business.stats import get_downloads_by_day, get_top_referers
 
 
 class DownloadView(View):
-    template_name = "download.html"
+
+    def _serve_file(self, request, archive):
+        zip_path = archive.zip_file.path if archive.zip_file else ""
+        if not zip_path or not os.path.exists(zip_path):
+            return render(request, "preview.html", {
+                "archive": archive,
+                "files": [],
+                "file_exists": False,
+            })
+
+        response = FileResponse(
+            open(zip_path, "rb"),
+            as_attachment=True,
+            filename=f"{archive.name}.zip",
+        )
+        ClickLog.objects.create(
+            archive=archive,
+            ip_address=request.META.get("REMOTE_ADDR", ""),
+        )
+        archive.download_count = F("download_count") + 1
+        archive.save(update_fields=["download_count"])
+        return response
 
     def get(self, request, code):
-        archive = self._get_archive_or_404(code)
+        archive = get_object_or_404(Archive, short_code=code, deleted_at__isnull=True)
 
-        if archive.password and not request.session.get(self._session_key(archive)):
-            return render(request, self.template_name, {"archive": archive})
+        if not archive.ready:
+            return redirect("wait", code=code)
+
+        if archive.password:
+            has_access = (
+                request.session.get(f"access_{archive.id}") or
+                archive.check_password(request.GET.get("password", ""))
+            )
+            if not has_access:
+                return HttpResponseForbidden()
+
+        if archive.expires_at and archive.expires_at < timezone.now():
+            return HttpResponseForbidden()
+        if archive.max_downloads and archive.download_count >= archive.max_downloads:
+            return HttpResponseForbidden()
 
         return self._serve_file(request, archive)
 
     def post(self, request, code):
-        archive = self._get_archive_or_404(code)
+        archive = get_object_or_404(Archive, short_code=code, deleted_at__isnull=True)
 
-        if archive.password:
-            pwd = request.POST.get("password", "")
-            if not archive.check_password(pwd):
-                return render(request, self.template_name, {"archive": archive, "error": "Неверный пароль"})
-            request.session[self._session_key(archive)] = True
+        if not archive.ready:
+            return redirect("wait", code=code)
 
-        return self._serve_file(request, archive)
+        if archive.password and not archive.check_password(request.POST.get("password", "")):
+            return HttpResponseForbidden()
 
-    def _get_archive_or_404(self, code):
-        archive = get_object_or_404(Archive, short_code=code, ready=True)
-        if archive.expires_at and archive.expires_at < timezone.now():
-            raise Http404
-        if archive.max_downloads and archive.download_count >= archive.max_downloads:
-            raise HttpResponseForbidden
-        return archive
+        request.session[f"access_{archive.id}"] = True
 
-    def _session_key(self, archive):
-        return f"download_access_{archive.pk}"
-
-    def _serve_file(self, request, archive):
-        filepath = archive.zip_file.path
-        filename = f"{archive.name}.zip"
-        response = FileResponse(open(filepath, "rb"), as_attachment=True, filename=filename)
-        archive.download_count += 1
-        archive.save(update_fields=["download_count"])
-        return response
-
-
-
-
-
-class StatsAPIView(APIView):
-    def get(self, request, short_code):
-        return Response({
-            "by_day": get_downloads_by_day(short_code),
-            "top_referers": get_top_referers(short_code),
-        })
-
-
-class StatsPageView(TemplateView):
-    template_name = "stats.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        code = self.kwargs.get("short_code")
-        context.update({
-            "short_code": code,
-            "by_day": get_downloads_by_day(code),
-            "top_referers": get_top_referers(code),
-        })
-        return context
+        return redirect("download", code=code)

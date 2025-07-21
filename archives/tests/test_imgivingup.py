@@ -20,6 +20,7 @@ def setup_media(tmp_path, settings):
 @pytest.fixture
 def archive_with_files(db, tmp_path):
     arch = Archive.objects.create(
+        name="name", 
         short_code="testcode",
         ready=False,
         owner=None,
@@ -84,10 +85,10 @@ def test_download_file_password(client, archive_with_files, settings):
 def test_download_missing_file(client, archive_ready):
     arch = archive_ready
     os.remove(Path(settings.MEDIA_ROOT) / arch.zip_file.name)
-    page = client.get(reverse("download-page", args=[arch.short_code]))
-    assert "Файл удалён" in page.content.decode()
     resp = client.get(reverse("download-file", args=[arch.short_code]))
-    assert resp.status_code == 404
+    assert "Файл удалён" in resp.content.decode()
+    assert resp.status_code == 200
+
 
 @pytest.mark.django_db
 def test_dashboard_delete_api(client_logged_in, user):

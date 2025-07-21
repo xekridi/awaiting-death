@@ -25,7 +25,10 @@ class TestWaitProgress:
     def test_wait_progress_404_for_wrong_owner(self, client_logged_in, user):
         other = User.objects.create_user(username="other", password="p")
         arch = Archive.objects.create(
-            short_code="abc", owner=other, ready=False
+            name="name", 
+            short_code="abc", 
+            owner=other, 
+            ready=False
         )
         url = reverse("wait-progress", args=[arch.short_code])
         response = client_logged_in.get(url)
@@ -33,7 +36,12 @@ class TestWaitProgress:
 
     def test_wait_progress_returns_working_if_no_task_and_no_error(self, client_logged_in, user):
         arch = Archive.objects.create(
-            short_code="wrk", owner=user, ready=False, error=None, build_task_id=None
+            name="name", 
+            short_code="wrk", 
+            owner=user, 
+            ready=False, 
+            error=None, 
+            build_task_id=None
         )
         url = reverse("wait-progress", args=[arch.short_code])
         resp = client_logged_in.get(url)
@@ -42,7 +50,11 @@ class TestWaitProgress:
 
     def test_wait_progress_returns_ready_if_ready_flag_true(self, client_logged_in, user):
         arch = Archive.objects.create(
-            short_code="rdy", owner=user, ready=True, error=None
+            name="name", 
+            short_code="rdy", 
+            owner=user, 
+            ready=True, 
+            error=None
         )
         url = reverse("wait-progress", args=[arch.short_code])
         resp = client_logged_in.get(url)
@@ -55,7 +67,11 @@ class TestWaitProgress:
 
     def test_wait_progress_returns_error_if_model_error_set(self, client_logged_in, user):
         arch = Archive.objects.create(
-            short_code="errm", owner=user, ready=False, error="boom!"
+            name="name", 
+            short_code="errm", 
+            owner=user,
+            ready=False,
+            error="boom!"
         )
         url = reverse("wait-progress", args=[arch.short_code])
         resp = client_logged_in.get(url)
@@ -68,7 +84,12 @@ class TestWaitProgress:
 
     def test_wait_progress_task_failed(self, monkeypatch, client_logged_in, user):
         arch = Archive.objects.create(
-            short_code="tskf", owner=user, ready=False, error=None, build_task_id="tid1"
+            name="name", 
+            short_code="tskf", 
+            owner=user, 
+            ready=False, 
+            error=None, 
+            build_task_id="tid1"
         )
 
         class DummyResult:
@@ -85,15 +106,16 @@ class TestWaitProgress:
         url = reverse("wait-progress", args=[arch.short_code])
         resp = client_logged_in.get(url)
         assert resp.status_code == 200
-        assert resp.json() == {
-            "state": "FAILURE",
-            "pct": 0,
-            "message": "task failure",
-        }
+        assert resp.json() == {'pct': 0, 'state': 'FAILURE'}
 
     def test_wait_progress_task_working(self, monkeypatch, client_logged_in, user):
         arch = Archive.objects.create(
-            short_code="tskw", owner=user, ready=False, error=None, build_task_id="tid2"
+            name="name", 
+            short_code="tskw", 
+            owner=user, 
+            ready=False,
+            error=None, 
+            build_task_id="tid2"
         )
 
         class DummyResult:

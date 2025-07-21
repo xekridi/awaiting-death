@@ -7,6 +7,7 @@ from archives.models import Archive
 @pytest.fixture
 def archive_not_ready(db):
     return Archive.objects.create(
+        name="name", 
         short_code="unready",
         ready=False,
         error=None,
@@ -40,4 +41,4 @@ def test_wait_progress_returns_pct(client, archive_not_ready):
     url = reverse("wait-progress", args=[archive_not_ready.short_code])
     response = client.get(url)
     assert response.status_code == 200
-    assert response.json() == {"pct": 0}
+    assert response.json() == {'pct': 0, 'state': 'PENDING'}

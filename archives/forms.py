@@ -21,20 +21,24 @@ class MultiFileField(forms.FileField):
             super(forms.FileField, self).validate(f)
 
 class UploadForm(forms.Form):
+    name          = forms.CharField(
+                        label="Название архива",
+                        max_length=120,
+                        required=True)
     files         = MultiFileField(
                         required=True,
                         widget=MultiFileInput(attrs={"multiple": True}),
-                        label="Выберите файлы"
-                     )
+                        label="Выберите файлы")
     description   = forms.CharField(required=False)
-    password1     = forms.CharField(required=False)
-    password2     = forms.CharField(required=False)
-    max_downloads = forms.IntegerField(min_value=0, required=False)
-    expires_at    = forms.DateTimeField(required=False)
+    password1     = forms.CharField(label="Пароль (необязательно)", required=False, widget=forms.PasswordInput)
+    password2     = forms.CharField(label="Повтор пароля", required=False, widget=forms.PasswordInput)
+    max_downloads = forms.IntegerField(label="Максимум скачиваний", required=False, min_value=0)
+    expires_at    = forms.DateTimeField(label="Срок жизни", required=False)
 
     def clean(self):
-        cleaned = super().clean()
-        files = cleaned.get("files")
-        if not files:
+        cd = super().clean()
+        if cd.get("password1") != cd.get("password2"):
+            self.add_error("password2", "Пароли не совпадают")
+        if not cd.get("files"):
             raise forms.ValidationError("Нужно выбрать хотя бы один файл.")
-        return cleaned
+        return cd

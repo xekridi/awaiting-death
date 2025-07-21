@@ -1,9 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
-<h3>Архив собирается…</h3>
-
+<h3>Архив «{{ archive.name }}» собирается…</h3>
 <progress id="wait-progress" value="0" max="100" style="width:100%;"></progress>
-
 <script>
     (function () {
         const code = "{{ archive.short_code }}";
@@ -15,15 +13,11 @@
                 .then(r => r.json())
                 .then(d => {
                     bar.value = d.pct;
-                    if (d.pct < 100) {
-                        setTimeout(poll, 1000);
-                    } else {
-                        window.location = `/d/${code}/preview/`;
-                    }
+                    if (d.pct < 100) { setTimeout(poll, 1000); }
+                    else { window.location = `/d/${code}/preview/`; }
                 })
                 .catch(() => setTimeout(poll, 1000));
         }
-
         poll();
     })();
 </script>
