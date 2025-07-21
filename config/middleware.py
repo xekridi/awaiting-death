@@ -12,9 +12,9 @@ class ExceptionLoggingMiddleware:
             return self.get_response(request)
         except Exception:
             tb = traceback.format_exc()
-            logger.error("Unhandled exception on %s %s:\n%s", 
-                         request.method, 
-                         request.path, 
+            logger.error("Unhandled exception on %s %s:\n%s",
+                         request.method,
+                         request.path,
                          tb)
             raise
 

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Скачать {{ archive.name }}{% endblock %}
+
+{% block content %}
+<h1>Скачать архив «{{ archive.name }}»</h1>
+{% if archive.password %}
+<form method="get">
+    {% csrf_token %}
+    <label for="pw">Пароль</label>
+    <input id="pw" type="password" name="password" required>
+    <button type="submit">Скачать</button>
+</form>
+{% endif %}
+{% endblock %}

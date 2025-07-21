@@ -79,23 +79,23 @@ def wait_progress(request, code):
             raise Http404()
 
     if archive.error:
-        return JsonResponse({"state": "FAILURE", 
-                             "message": archive.error, 
+        return JsonResponse({"state": "FAILURE",
+                             "message": archive.error,
                              "pct": 0})
 
     if archive.ready:
-        return JsonResponse({"state": "SUCCESS", 
-                             "url": archive.get_download_url(), 
+        return JsonResponse({"state": "SUCCESS",
+                             "url": archive.get_download_url(),
                              "pct": 100})
 
     if not archive.build_task_id:
-        return JsonResponse({"state": "PENDING", 
+        return JsonResponse({"state": "PENDING",
                              "pct": 0})
 
     result = AsyncResult(archive.build_task_id)
     info   = getattr(result, "info", {}) or {}
-    return JsonResponse({"state": result.state, 
-                         "pct": info.get("pct", 
+    return JsonResponse({"state": result.state,
+                         "pct": info.get("pct",
                                          0)})
 
 class PreviewView(TemplateView):

@@ -5,8 +5,8 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 
-from archives.models import Archive, FileItem
-
+from ..models.archive import Archive
+from ..models.file_item import FileItem
 User = get_user_model()
 
 @pytest.fixture(autouse=True)

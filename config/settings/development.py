@@ -1,0 +1,11 @@
+from .base import *
+
+DEBUG = True
+ALLOWED_HOSTS = ["*"]
+
+INSTALLED_APPS += [
+]
+
+SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
