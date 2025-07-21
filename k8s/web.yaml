@@ -1,34 +1,42 @@
 apiVersion: apps/v1
 kind: Deployment
-metadata: { name: web }
+metadata:
+  name: default-web
 spec:
-  selector: { matchLabels: { app: web } }
   replicas: 1
+  selector:
+    matchLabels: { app: default-web }
   template:
-    metadata: { labels: { app: web } }
+    metadata:
+      labels: { app: default-web }
     spec:
       containers:
       - name: web
-        image: default:latest
+        image: default-web:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
         envFrom:
-        - configMapRef: { name: web-config }
-        - secretRef:    { name: db-secret }
-        ports: [{ containerPort: 8000 }]
-        volumeMounts:
-        - name: media
-          mountPath: /vol/web/media
-        - name: static
-          mountPath: /vol/web/static
-      volumes:
-      - name: media
-        emptyDir: {}
-      - name: static
-        emptyDir: {}
+        - configMapRef:
+            name: web-config
+        - secretRef:
+            name: django-secret
+        env:
+        - name: DATABASE_URL
+          value: >-
+            postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)
+            @$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)
+        - name: REDIS_URL
+          value: redis://redis:6379/0
 ---
 apiVersion: v1
 kind: Service
-metadata: { name: web }
+metadata:
+  name: default-web
 spec:
-  selector: { app: web }
-  type: NodePort
-  ports: [{ port: 8000, nodePort: 30080 }]
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+  selector:
+    app: default-web

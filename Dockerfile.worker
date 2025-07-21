@@ -1,0 +1,2 @@
+FROM default-web:latest
+CMD ["celery", "-A", "config", "worker", "--loglevel=info"]

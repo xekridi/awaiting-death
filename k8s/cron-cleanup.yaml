@@ -11,9 +11,9 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: cleanup
-              image: zipshare:latest
+              image: default:latest
               command: ["celery", "-A", "config.celery",
                         "call", "archives.tasks.cleanup_expired_archives"]
               envFrom:
                 - configMapRef:
-                    name: zipshare-env
+                    name: default-env

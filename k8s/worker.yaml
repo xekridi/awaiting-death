@@ -1,22 +1,28 @@
 apiVersion: apps/v1
 kind: Deployment
-metadata: { name: worker }
+metadata:
+  name: default-worker
 spec:
-  selector: { matchLabels: { app: worker } }
   replicas: 1
+  selector:
+    matchLabels: { app: default-worker }
   template:
-    metadata: { labels: { app: worker } }
+    metadata:
+      labels: { app: default-worker }
     spec:
       containers:
       - name: worker
-        image: default:latest
-        command: ["python","-m","celery","-A","config","worker","--loglevel=info"]
+        image: default-worker:latest
+        imagePullPolicy: IfNotPresent
         envFrom:
-        - configMapRef: { name: web-config }
-        - secretRef:    { name: db-secret }
-        volumeMounts:
-        - name: media
-          mountPath: /vol/web/media
-      volumes:
-      - name: media
-        emptyDir: {}
+        - configMapRef:
+            name: web-config
+        - secretRef:
+            name: django-secret
+        env:
+        - name: DATABASE_URL
+          value: >-
+            postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)
+            @$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)
+        - name: REDIS_URL
+          value: redis://redis:6379/0

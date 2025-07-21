@@ -12,10 +12,6 @@
 </form>
 {% else %}
 
-{% if archive.qr_image %}
-<img src="{{ archive.qr_image.url }}" width="160" alt="QR">
-{% endif %}
-
 {% if not archive.ready %}
 <p>Пожалуйста, подождите, архив собирается…</p>
 {% else %}
@@ -25,6 +21,11 @@
 <p class="text-red-600">Файл удалён</p>
 {% endif %}
 
+{% if archive.qr_image %}
+<div class="mb-4">
+    <img src="{{ archive.qr_image.url }}" width="160" alt="QR-код">
+</div>
+{% endif %}
 <a href="{% url 'download-file' archive.short_code %}">
     <button>Скачать {{ archive.name }}.zip</button>
 </a>
