@@ -22,10 +22,6 @@ spec:
         - secretRef:
             name: django-secret
         env:
-        - name: DATABASE_URL
-          value: >-
-            postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)
-            @$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)
         - name: REDIS_URL
           value: redis://redis:6379/0
 ---

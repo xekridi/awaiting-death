@@ -4,7 +4,7 @@ metadata: { name: django-secret }
 type: Opaque
 stringData:
   POSTGRES_USER: default
-  POSTGRES_PASSWORD: default
+  POSTGRES_PASSWORD: secret
   POSTGRES_DB: default
 ---
 apiVersion: apps/v1
