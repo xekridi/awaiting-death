@@ -1,5 +1,6 @@
 import pytest
 
+
 @pytest.mark.django_db
 def test_security_headers(client):
     resp = client.get("/")

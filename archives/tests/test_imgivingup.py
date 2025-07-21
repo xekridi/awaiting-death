@@ -1,14 +1,14 @@
 import os
-import shutil
-import pytest
 from pathlib import Path
 
-from django.urls import reverse
+import pytest
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.urls import reverse
 
-from archives.tasks import build_zip
 from archives.models import Archive, FileItem
+from archives.tasks import build_zip
+
 
 @pytest.fixture(autouse=True)
 def setup_media(tmp_path, settings):
@@ -20,14 +20,14 @@ def setup_media(tmp_path, settings):
 @pytest.fixture
 def archive_with_files(db, tmp_path):
     arch = Archive.objects.create(
-        name="name", 
+        name="name",
         short_code="testcode",
         ready=False,
         owner=None,
     )
     file_path = tmp_path / "a.txt"
     file_path.write_bytes(b"hello")
-    fi = FileItem.objects.create(
+    _ = FileItem.objects.create(
         archive=arch,
         file=SimpleUploadedFile("a.txt", b"hello")
     )

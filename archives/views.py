@@ -1,9 +1,9 @@
 import os
 
-from django.http import Http404, HttpResponseForbidden, FileResponse
-from django.shortcuts import get_object_or_404, render, redirect
-from django.utils import timezone
 from django.db.models import F
+from django.http import FileResponse, HttpResponseForbidden
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views import View
 
 from .models import Archive, ClickLog

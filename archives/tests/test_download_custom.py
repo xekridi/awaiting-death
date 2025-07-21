@@ -1,9 +1,8 @@
-import os
 import zipfile
+
 import pytest
 from django.urls import reverse
 from django.utils import timezone
-from django.conf import settings
 
 from archives.models import Archive, ClickLog
 
@@ -17,7 +16,7 @@ def test_successful_download(tmp_path, client, settings):
     with zipfile.ZipFile(str(zip_path), "w") as zf:
         zf.writestr("f.txt", "data")
     arch = Archive.objects.create(
-        name="name", 
+        name="name",
         short_code="DL1",
         ready=True,
         zip_file="zips/ok.zip"
@@ -40,8 +39,8 @@ def test_limit_and_password(tmp_path, client, settings):
     with zipfile.ZipFile(str(zip_path), "w") as zf:
         zf.writestr("a.txt", "x")
     exp = timezone.now() + timezone.timedelta(days=1)
-    arch = Archive.objects.create(
-        name="name", 
+    _ = Archive.objects.create(
+        name="name",
         short_code="DL2",
         ready=True,
         zip_file="zips/t.zip",

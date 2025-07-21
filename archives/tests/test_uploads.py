@@ -1,6 +1,7 @@
 import pytest
-from django.urls import reverse
 from django.contrib.auth import get_user_model
+from django.urls import reverse
+
 from archives.models import Archive
 
 User = get_user_model()
@@ -25,22 +26,22 @@ class TestWaitProgress:
     def test_wait_progress_404_for_wrong_owner(self, client_logged_in, user):
         other = User.objects.create_user(username="other", password="p")
         arch = Archive.objects.create(
-            name="name", 
-            short_code="abc", 
-            owner=other, 
+            name="name",
+            short_code="abc",
+            owner=other,
             ready=False
         )
         url = reverse("wait-progress", args=[arch.short_code])
         response = client_logged_in.get(url)
         assert response.status_code == 404
 
-    def test_wait_progress_returns_working_if_no_task_and_no_error(self, client_logged_in, user):
+    def test_wait_progress_returns_working_if_no_task_no_error(self, client_logged_in, user):
         arch = Archive.objects.create(
-            name="name", 
-            short_code="wrk", 
-            owner=user, 
-            ready=False, 
-            error=None, 
+            name="name",
+            short_code="wrk",
+            owner=user,
+            ready=False,
+            error=None,
             build_task_id=None
         )
         url = reverse("wait-progress", args=[arch.short_code])
@@ -48,12 +49,12 @@ class TestWaitProgress:
         assert resp.status_code == 200
         assert resp.json() == {"state": "PENDING", "pct": 0}
 
-    def test_wait_progress_returns_ready_if_ready_flag_true(self, client_logged_in, user):
+    def test_wait_progress_returns_ready_if_ready_flag(self, client_logged_in, user):
         arch = Archive.objects.create(
-            name="name", 
-            short_code="rdy", 
-            owner=user, 
-            ready=True, 
+            name="name",
+            short_code="rdy",
+            owner=user,
+            ready=True,
             error=None
         )
         url = reverse("wait-progress", args=[arch.short_code])
@@ -65,10 +66,10 @@ class TestWaitProgress:
             "url": arch.get_download_url(),
         }
 
-    def test_wait_progress_returns_error_if_model_error_set(self, client_logged_in, user):
+    def test_wait_progress_returns_error_if_model_error(self, client_logged_in, user):
         arch = Archive.objects.create(
-            name="name", 
-            short_code="errm", 
+            name="name",
+            short_code="errm",
             owner=user,
             ready=False,
             error="boom!"
@@ -84,18 +85,18 @@ class TestWaitProgress:
 
     def test_wait_progress_task_failed(self, monkeypatch, client_logged_in, user):
         arch = Archive.objects.create(
-            name="name", 
-            short_code="tskf", 
-            owner=user, 
-            ready=False, 
-            error=None, 
+            name="name",
+            short_code="tskf",
+            owner=user,
+            ready=False,
+            error=None,
             build_task_id="tid1"
         )
 
         class DummyResult:
             state = "FAILURE"
             info = {"exc": "task failure"}
-            def failed(self): 
+            def failed(self):
                 return True
 
         monkeypatch.setattr(
@@ -110,18 +111,18 @@ class TestWaitProgress:
 
     def test_wait_progress_task_working(self, monkeypatch, client_logged_in, user):
         arch = Archive.objects.create(
-            name="name", 
-            short_code="tskw", 
-            owner=user, 
+            name="name",
+            short_code="tskw",
+            owner=user,
             ready=False,
-            error=None, 
+            error=None,
             build_task_id="tid2"
         )
 
         class DummyResult:
             state = "PROGRESS"
             info = {"pct": 42}
-            def failed(self): 
+            def failed(self):
                 return False
 
         monkeypatch.setattr(

@@ -1,10 +1,11 @@
 import os
+
 import pytest
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from archives.models import Archive, FileItem
 from rest_framework.test import APIClient
+
+from archives.models import Archive, FileItem
 
 User = get_user_model()
 
@@ -26,7 +27,7 @@ def client_logged_in(client, user):
 @pytest.fixture
 def archive(db, user):
     return Archive.objects.create(
-        name="name", 
+        name="name",
         short_code="c1",
         owner=user,
         ready=False,
@@ -36,7 +37,7 @@ def archive(db, user):
 @pytest.fixture
 def archive_with_password(db, user):
     return Archive.objects.create(
-        name="name", 
+        name="name",
         short_code="c1",
         owner=user,
         ready=False,

@@ -1,6 +1,8 @@
-import qrcode
 from io import BytesIO
+
+import qrcode
 from django.core.files.base import ContentFile
+
 
 def generate_qr_image(url: str):
     qr = qrcode.QRCode(box_size=10, border=4)

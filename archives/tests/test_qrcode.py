@@ -1,8 +1,10 @@
 import os
-from django.urls import reverse
+
 import pytest
-from django.conf import settings
+from django.urls import reverse
+
 from archives.models import Archive
+
 
 @pytest.fixture
 def user(db, django_user_model):
@@ -38,10 +40,10 @@ def test_qr_created_on_api_create(api_client, tmp_path, settings):
 def test_qr_visible_on_download_page(client, tmp_path, settings, user):
     settings.MEDIA_ROOT = str(tmp_path)
     arch = Archive.objects.create(
-        name="name", 
-        short_code="T1", 
-        ready=True, 
-        max_downloads=0, 
+        name="name",
+        short_code="T1",
+        ready=True,
+        max_downloads=0,
         owner=user
     )
     qr_dir = os.path.join(settings.MEDIA_ROOT, "qr_codes")

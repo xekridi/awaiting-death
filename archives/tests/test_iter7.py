@@ -1,12 +1,11 @@
-import io
 import zipfile
-import tempfile
-from django.urls import reverse
-from django.contrib.auth import get_user_model
+
 import pytest
-from django.utils import timezone
+from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from archives.models import Archive, FileItem
+from django.urls import reverse
+
+from archives.models import Archive
 
 User = get_user_model()
 
@@ -51,7 +50,7 @@ class TestUIAndAccounts:
     def test_download_view(self, client, settings, tmp_path):
         user = User.objects.create_user('u', 'u@example.com', 'pw')
         archive = Archive.objects.create(
-            name="name", 
+            name="name",
             description='d',
             short_code='code123',
             ready=True,
@@ -72,7 +71,7 @@ class TestUIAndAccounts:
         response = client.get(reverse('dashboard'))
         assert response.status_code == 302
         user = User.objects.create_user('u2', 'u2@example.com', 'pw')
-        archive = Archive.objects.create(description='desc2', short_code='c2', owner=user)
+        _ = Archive.objects.create(description='desc2', short_code='c2', owner=user)
         client.login(username='u2', password='pw')
         response = client.get(reverse('dashboard'))
         assert response.status_code == 200
@@ -80,7 +79,7 @@ class TestUIAndAccounts:
 
     def test_stats_page(self, client):
         user = User.objects.create_user("u3", "u3@example.com", "pw")
-        archive = Archive.objects.create(
+        _ = Archive.objects.create(
             description="desc", short_code="st1", ready=True, owner=user
         )
 

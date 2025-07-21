@@ -1,10 +1,9 @@
-import pytest
-import uuid
 import string
 
-from django.urls import reverse
+import pytest
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.urls import reverse
 
 pytestmark = pytest.mark.django_db
 User = get_user_model()

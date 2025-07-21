@@ -1,9 +1,12 @@
 import os
 import zipfile
+
 import pytest
 from django.urls import reverse
 from django.utils import timezone
+
 from archives.models import Archive, ClickLog
+
 
 @pytest.fixture
 def zip_path(settings, tmp_path):
@@ -18,8 +21,8 @@ def zip_path(settings, tmp_path):
 
 @pytest.mark.django_db
 def test_preview_wait(client):
-    arch = Archive.objects.create(
-        name="name", 
+    _ = Archive.objects.create(
+        name="name",
         short_code="wait1",
         ready=False,
         max_downloads=0,
@@ -50,7 +53,7 @@ def test_preview_ready_list_files(client, zip_path):
 @pytest.mark.django_db
 def test_preview_missing_file(client):
     arch = Archive.objects.create(
-        name="name", 
+        name="name",
         short_code="miss1",
         ready=True,
         max_downloads=0,
@@ -66,7 +69,7 @@ def test_preview_missing_file(client):
 def test_download_no_password(client, zip_path):
     name, _ = zip_path
     arch = Archive.objects.create(
-        name="name", 
+        name="name",
         short_code="dl1",
         ready=True,
         max_downloads=0,
@@ -81,13 +84,13 @@ def test_download_no_password(client, zip_path):
 def test_download_with_password(client, zip_path):
     name, _ = zip_path
     arch = Archive.objects.create(
-        name="name", 
+        name="name",
         short_code="dl2",
         ready=True,
         max_downloads=0,
         password="pw"
     )
-    arch.zip_file.name = name 
+    arch.zip_file.name = name
     arch.save(update_fields=["zip_file"])
     url = reverse("download-file", args=["dl2"])
     resp = client.get(f"{url}?password=pw")
@@ -125,4 +128,3 @@ def test_download_limit(client, zip_path):
     url = reverse("download-file", args=["dl4"])
     resp = client.get(url)
     assert resp.status_code == 403
-

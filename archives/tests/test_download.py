@@ -1,16 +1,17 @@
-import os
+
 import pytest
-import zipfile
+from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
-from django.conf import settings
+
 from archives.models import Archive, ClickLog
+
 
 @pytest.mark.django_db
 def test_successful_download(tmp_path, client):
     exp = timezone.now() + timezone.timedelta(days=1)
     arch = Archive.objects.create(
-        name="name", 
+        name="name",
         short_code="DL1",
         expires_at=exp,
         ready=True,
@@ -31,8 +32,8 @@ def test_successful_download(tmp_path, client):
 @pytest.mark.django_db
 def test_limit_and_password(tmp_path, client):
     exp = timezone.now() + timezone.timedelta(days=1)
-    arch = Archive.objects.create(
-        name="name", 
+    _ = Archive.objects.create(
+        name="name",
         short_code="DL2",
         expires_at=exp,
         ready=True,

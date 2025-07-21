@@ -1,7 +1,9 @@
 from django.db.models import Count
-from django.utils import timezone
 from django.db.models.functions import TruncDate
+from django.utils import timezone
+
 from archives.models import ClickLog
+
 
 def get_downloads_by_day(short_code: str, days: int = 7):
     since = timezone.now() - timezone.timedelta(days=days)

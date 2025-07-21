@@ -1,32 +1,21 @@
+import logging
 import os
 import uuid
-import logging
 import zipfile
-from io import BytesIO
-from pathlib import Path
 
-from django.core.files.base import ContentFile
-from django.conf import settings
-from django.db.models import F
-from django.http import Http404, HttpResponseForbidden, FileResponse, JsonResponse
-from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse_lazy, reverse
-from django.contrib.auth.views import redirect_to_login
-from django.utils import timezone
-from django.utils.html import escape
-from django.views import View
-from django.views.generic import TemplateView, FormView, ListView, DetailView
-
-from django.contrib.auth.mixins import LoginRequiredMixin
 from celery.result import AsyncResult
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import redirect_to_login
+from django.http import Http404, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse, reverse_lazy
+from django.views.generic import DetailView, FormView, ListView, TemplateView
 
+from .business.stats import get_downloads_by_day, get_top_referers
 from .forms import UploadForm
-from .models import Archive, FileItem, ClickLog
+from .models import Archive, FileItem
 from .tasks import build_zip
 from .utils import generate_qr_image
-from .views import DownloadView
-from .business.stats import get_downloads_by_day, get_top_referers
-
 
 logger = logging.getLogger("archives.views_user")
 logger.setLevel(logging.DEBUG)
@@ -63,7 +52,7 @@ class UploadView(FormView):
         qr_file = generate_qr_image(preview_url)
         archive.qr_image.save(f"{archive.short_code}.png", qr_file, save=True)
         return redirect("wait", code=code)
-    
+
     def form_invalid(self, form):
         logger.debug("UPLOAD errors: %s", form.errors.as_json())
         return super().form_invalid(form)
@@ -90,17 +79,24 @@ def wait_progress(request, code):
             raise Http404()
 
     if archive.error:
-        return JsonResponse({"state": "FAILURE", "message": archive.error, "pct": 0})
+        return JsonResponse({"state": "FAILURE", 
+                             "message": archive.error, 
+                             "pct": 0})
 
     if archive.ready:
-        return JsonResponse({"state": "SUCCESS", "url": archive.get_download_url(), "pct": 100})
+        return JsonResponse({"state": "SUCCESS", 
+                             "url": archive.get_download_url(), 
+                             "pct": 100})
 
     if not archive.build_task_id:
-        return JsonResponse({"state": "PENDING", "pct": 0})
+        return JsonResponse({"state": "PENDING", 
+                             "pct": 0})
 
     result = AsyncResult(archive.build_task_id)
     info   = getattr(result, "info", {}) or {}
-    return JsonResponse({"state": result.state, "pct": info.get("pct", 0)})
+    return JsonResponse({"state": result.state, 
+                         "pct": info.get("pct", 
+                                         0)})
 
 class PreviewView(TemplateView):
     template_name = "preview.html"
@@ -108,7 +104,8 @@ class PreviewView(TemplateView):
     def get(self, request, code):
         archive = get_object_or_404(Archive, short_code=code, deleted_at__isnull=True)
 
-        has_access = (not archive.password) or request.session.get(f"access_{archive.id}")
+        has_access = (not archive.password) \
+            or request.session.get(f"access_{archive.id}")
 
         files, exists = [], False
         if archive.ready and archive.zip_file and os.path.exists(archive.zip_file.path):

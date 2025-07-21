@@ -1,16 +1,18 @@
 import os
+
 from django.conf import settings
 from django.urls import reverse
-
-from rest_framework import viewsets, permissions, status, generics
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .serializers import ArchiveSerializer
+
+from ..business.stats import get_downloads_by_day, get_top_referers
 from ..models import Archive, FileItem
 from ..utils import generate_qr_image
-from ..business.stats import get_downloads_by_day, get_top_referers
+from .serializers import ArchiveSerializer
+
 
 class IsOwner(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
@@ -51,7 +53,7 @@ class ArchiveViewSet(viewsets.ModelViewSet):
         FileItem.objects.filter(archive=archive).delete()
         archive.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    
+
     def perform_create(self, serializer):
         archive = serializer.save()
         request = self.request
@@ -67,7 +69,7 @@ class StatsAPIView(APIView):
             "by_day": get_downloads_by_day(short_code),
             "top_referers": get_top_referers(short_code),
         })
-    
+
 
 class ArchiveCreateAPIView(generics.CreateAPIView):
     queryset = Archive.objects.all()
@@ -76,4 +78,3 @@ class ArchiveCreateAPIView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         resp = super().create(request, *args, **kwargs)
         return Response(resp.data, status=status.HTTP_201_CREATED)
-    

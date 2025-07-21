@@ -1,36 +1,33 @@
 import celery.result
+from config.celery import app
+from .models import Archive, FileItem
 
 def _eager_result_new(cls, *args, **kwargs):
     return object.__new__(cls)
 
 celery.result.EagerResult.__new__ = classmethod(_eager_result_new)
 
+import logging
 import os
 import uuid
 import zipfile
-import logging
 from pathlib import Path
 
-from celery import states
 from celery import shared_task
-
 from celery.exceptions import Ignore
 from django.conf import settings
-from django.utils import timezone
 from django.core.files.storage import default_storage
-from django.core.files import File
 from django.db import transaction
+from django.utils import timezone
 
 
-from .models import Archive, FileItem
-from config.celery import app
 
 logger = logging.getLogger(__name__)
 
 
 @shared_task(bind=True)
 def build_zip(self, archive_id):
-    if not getattr(self.request, "id", None):          
+    if not getattr(self.request, "id", None):
         self.request.id = uuid.uuid4().hex
 
     with transaction.atomic():

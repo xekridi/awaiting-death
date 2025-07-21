@@ -1,18 +1,19 @@
-from django.contrib.auth.views import LoginView, LogoutView
-from django.contrib.auth import login
-from django.urls import reverse_lazy
-from django.shortcuts import redirect
-
-from django.views.generic import CreateView
-from .forms import SignUpForm
 import logging
+
+from django.contrib.auth import login
+from django.contrib.auth.views import LoginView, LogoutView
+from django.shortcuts import redirect
+from django.urls import reverse_lazy
+from django.views.generic import CreateView
+
+from .forms import SignUpForm
 
 logger = logging.getLogger(__name__)
 
 class SignUpView(CreateView):
     form_class    = SignUpForm
     template_name = "registration/signup.html"
-    success_url   = reverse_lazy("dashboard") 
+    success_url   = reverse_lazy("dashboard")
 
     def form_valid(self, form):
         user = form.save()

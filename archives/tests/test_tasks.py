@@ -1,7 +1,6 @@
-import os
-import pytest
 from pathlib import Path
 
+import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 
@@ -15,7 +14,7 @@ def test_build_zip_idempotent(tmp_path, settings):
     settings.DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 
     arch = Archive.objects.create(
-        name="name", 
+        name="name",
         short_code="XX",
         ready=False,
         expires_at=timezone.now() + timezone.timedelta(days=1),

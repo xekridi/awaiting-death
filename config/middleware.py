@@ -10,9 +10,12 @@ class ExceptionLoggingMiddleware:
     def __call__(self, request):
         try:
             return self.get_response(request)
-        except Exception as e:
+        except Exception:
             tb = traceback.format_exc()
-            logger.error("Unhandled exception on %s %s:\n%s", request.method, request.path, tb)
+            logger.error("Unhandled exception on %s %s:\n%s", 
+                         request.method, 
+                         request.path, 
+                         tb)
             raise
 
 class SecurityHeadersMiddleware:

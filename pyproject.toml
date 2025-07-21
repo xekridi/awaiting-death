@@ -58,6 +58,3 @@ pyrefly = "^0.24.2"
 django-stubs = "^5.2.2"
 djangorestframework-stubs = "^3.16.1"
 celery-types = "^0.23.0"
-
-
-

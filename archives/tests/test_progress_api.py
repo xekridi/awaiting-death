@@ -1,13 +1,13 @@
 import pytest
 from django.urls import reverse
-from celery.result import AsyncResult
 
 from archives.models import Archive
+
 
 @pytest.fixture
 def archive_not_ready(db):
     return Archive.objects.create(
-        name="name", 
+        name="name",
         short_code="unready",
         ready=False,
         error=None,

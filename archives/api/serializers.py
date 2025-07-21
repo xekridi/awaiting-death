@@ -1,7 +1,9 @@
+from django.urls import reverse
 from rest_framework import serializers
+
 from ..models import Archive
 from ..utils import generate_qr_image
-from django.urls import reverse
+
 
 class ArchiveSerializer(serializers.ModelSerializer):
     name = serializers.CharField(required=False, allow_blank=True)

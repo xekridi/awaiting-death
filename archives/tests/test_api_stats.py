@@ -2,7 +2,9 @@ import pytest
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
+
 from archives.models import Archive, ClickLog
+
 
 @pytest.mark.django_db
 def test_archive_stats_api(client):

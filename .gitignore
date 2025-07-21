@@ -28,7 +28,7 @@ celerybeat-schedule
 *.tar
 docker-compose.override.yml
 
-.pytest_cache/
+*_cache/
 .coverage
 htmlcov/
 

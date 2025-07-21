@@ -1,10 +1,6 @@
 from django.contrib import admin
-from django.urls import path, include
 from django.http import HttpResponse
-from archives.views_user import (
-    HomePage, UploadView, WaitView, wait_progress,
-    DashboardView, ArchiveDetailView, StatsPageView, PreviewView,
-)
+from django.urls import include, path
 
 urlpatterns = [
     path('health/', lambda r: HttpResponse('OK'), name='health'),

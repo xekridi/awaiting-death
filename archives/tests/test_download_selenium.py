@@ -1,14 +1,16 @@
 import os
 import zipfile
+
 import pytest
-from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from selenium import webdriver
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 
 from archives.models import Archive
+
 
 @pytest.mark.selenium
 class DownloadFlowSeleniumTest(StaticLiveServerTestCase):
@@ -37,14 +39,14 @@ class DownloadFlowSeleniumTest(StaticLiveServerTestCase):
         os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
 
         self.wait_arch = Archive.objects.create(
-            name="name", 
+            name="name",
             short_code="sel-wait",
             ready=False,
             max_downloads=0
         )
 
         self.ready_arch = Archive.objects.create(
-            name="name", 
+            name="name",
             short_code="sel-ready",
             ready=True,
             max_downloads=0,
