@@ -1,5 +1,6 @@
 import os
 import zipfile
+
 import pytest
 from django.conf import settings
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
@@ -7,7 +8,9 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
+
 from archives.models.archive import Archive
+
 
 @pytest.mark.selenium
 class DownloadFlowSeleniumTest(StaticLiveServerTestCase):

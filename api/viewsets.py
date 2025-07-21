@@ -1,9 +1,11 @@
-from rest_framework import viewsets, permissions
+from rest_framework import permissions, viewsets
 
-from .serializers import ArchiveSerializer, FileItemSerializer, ClickLogSerializer
 from archives.models.archive import Archive
-from archives.models.file_item import FileItem
 from archives.models.click_log import ClickLog
+from archives.models.file_item import FileItem
+
+from .serializers import ArchiveSerializer, ClickLogSerializer, FileItemSerializer
+
 
 class ArchiveViewSet(viewsets.ModelViewSet):
     queryset = Archive.objects.all()

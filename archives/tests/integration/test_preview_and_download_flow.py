@@ -1,6 +1,8 @@
 import pytest
 from django.urls import reverse
+
 from archives.models.archive import Archive
+
 
 @pytest.fixture
 def zip_archive(tmp_path, settings):

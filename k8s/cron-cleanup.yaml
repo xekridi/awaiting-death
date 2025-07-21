@@ -11,7 +11,8 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: cleanup
-              image: default:latest
+              image: default-worker:latest
+              imagePullPolicy: Never
               command: ["celery", "-A", "config.celery",
                         "call", "archives.tasks.cleanup_expired_archives"]
               envFrom:

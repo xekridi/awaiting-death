@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from ..models.click_log import ClickLog
 
+
 def get_downloads_by_day(short_code, days=7):
     since = timezone.now() - timezone.timedelta(days=days)
     qs = (

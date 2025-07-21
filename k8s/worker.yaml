@@ -11,9 +11,9 @@ spec:
       labels: { app: default-worker }
     spec:
       containers:
-      - name: worker
+      - name: default-worker
         image: default-worker:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Never
         envFrom:
         - configMapRef:
             name: web-config

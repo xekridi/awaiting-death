@@ -1,10 +1,11 @@
-from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from rest_framework.views import APIView
+from django.views.generic import TemplateView
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from ..services.stats import get_downloads_by_day, get_top_referers
 from ..models.archive import Archive
+from ..services.stats import get_downloads_by_day, get_top_referers
+
 
 class StatsPageView(LoginRequiredMixin, TemplateView):
     template_name = "stats.html"

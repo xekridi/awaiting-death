@@ -1,6 +1,7 @@
-import uuid, logging
+import logging
+import uuid
+
 from django.urls import reverse
-from celery.result import AsyncResult
 
 from ..models.archive import Archive
 from ..models.file_item import FileItem

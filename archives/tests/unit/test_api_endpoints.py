@@ -6,6 +6,7 @@ from rest_framework import status
 from archives.models.archive import Archive
 from archives.models.file_item import FileItem
 
+
 @pytest.fixture
 def archive_data():
     return {

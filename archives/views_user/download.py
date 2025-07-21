@@ -1,19 +1,20 @@
 import os
 
-from django.shortcuts import  redirect, render
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied, SuspiciousOperation
+from django.http import FileResponse, Http404, HttpResponseForbidden
+from django.shortcuts import redirect, render
+from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import TemplateView
-from django.http import FileResponse, HttpResponseForbidden, Http404
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.urls import reverse_lazy
-from django.core.exceptions import PermissionDenied, SuspiciousOperation
 
 from ..models.archive import Archive
 from ..services.download import (
+    DownloadError,
     get_archive_for_download,
     mark_download_and_get_path,
-    DownloadError,
 )
+
 
 class DownloadPageView(LoginRequiredMixin, TemplateView):
     model               = Archive

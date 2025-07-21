@@ -1,7 +1,8 @@
 import pytest
-from django.urls import reverse
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.urls import reverse
+
 from archives.models.archive import Archive
 
 User = get_user_model()

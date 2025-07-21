@@ -1,9 +1,10 @@
 import pytest
 from django.utils import timezone
 
-from archives.services.stats import get_downloads_by_day, get_top_referers
 from archives.models.archive import Archive
 from archives.models.click_log import ClickLog
+from archives.services.stats import get_downloads_by_day, get_top_referers
+
 
 @pytest.mark.django_db
 def test_get_downloads_by_day_and_top_referers():

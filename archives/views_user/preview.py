@@ -1,8 +1,8 @@
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
-from django.urls import reverse
 
 from ..models.archive import Archive
+
 
 class PreviewView(View):
     def get(self, request, code):

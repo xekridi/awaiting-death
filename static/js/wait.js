@@ -1,6 +1,6 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const progressEl = document.getElementById('wait-progress');
-    const textEl = document.getElementById('wait-text');
+document.addEventListener("DOMContentLoaded", () => {
+    const progressEl = document.getElementById("wait-progress");
+    const textEl = document.getElementById("wait-text");
     const code = progressEl.dataset.code;
     const pollUrl = progressEl.dataset.progressUrl;
 

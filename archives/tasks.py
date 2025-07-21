@@ -1,11 +1,15 @@
-import os, uuid, zipfile, logging
+import logging
+import os
+import uuid
+import zipfile
 from pathlib import Path
+
 from celery import shared_task, states
 from celery.exceptions import Ignore
 from django.conf import settings
+from django.core.files.storage import default_storage
 from django.db import transaction
 from django.utils import timezone
-from django.core.files.storage import default_storage
 
 from .models.archive import Archive
 from .models.file_item import FileItem

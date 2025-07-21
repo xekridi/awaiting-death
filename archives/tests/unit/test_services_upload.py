@@ -1,11 +1,13 @@
 import os
-import pytest
-from django.test import RequestFactory
-from django.core.files.uploadedfile import SimpleUploadedFile
 
-from archives.services.upload import handle_upload
+import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import RequestFactory
+
 from archives.models.archive import Archive
 from archives.models.file_item import FileItem
+from archives.services.upload import handle_upload
+
 
 @pytest.mark.django_db
 def test_handle_upload_creates_archive_and_qr(tmp_path, settings, user):

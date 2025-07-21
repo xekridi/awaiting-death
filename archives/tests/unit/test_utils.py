@@ -1,5 +1,6 @@
 from archives.utils import generate_qr_image
 
+
 def test_generate_qr_image_returns_file_like_object():
     qr_file = generate_qr_image("https://example.com")
     assert hasattr(qr_file, "read")

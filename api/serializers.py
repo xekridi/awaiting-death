@@ -1,11 +1,11 @@
+from django.urls import reverse
 from rest_framework import serializers
 
-from django.urls import reverse
-
 from archives.models.archive import Archive
-from archives.models.file_item import FileItem
 from archives.models.click_log import ClickLog
+from archives.models.file_item import FileItem
 from archives.utils import generate_qr_image
+
 
 class ArchiveSerializer(serializers.ModelSerializer):
     short_code = serializers.CharField(read_only=True)

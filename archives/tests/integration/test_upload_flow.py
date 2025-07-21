@@ -1,6 +1,7 @@
 import pytest
-from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.urls import reverse
+
 
 @pytest.mark.django_db
 def test_upload_redirects_to_wait_page(client_logged_in):

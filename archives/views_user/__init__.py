@@ -1,10 +1,10 @@
-from .home import HomePage
-from .upload import UploadView, WaitView, wait_progress
-from .download import DownloadPageView, DownloadView
-from .preview import PreviewView
 from .dashboard import DashboardView
 from .detail import ArchiveDetailView
-from .stats import StatsPageView, StatsAPIView
+from .download import DownloadPageView, DownloadView
+from .home import HomePage
+from .preview import PreviewView
+from .stats import StatsAPIView, StatsPageView
+from .upload import UploadView, WaitView, wait_progress
 
 __all__ = [
     "HomePage", "UploadView", "WaitView", "wait_progress",

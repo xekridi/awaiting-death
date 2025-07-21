@@ -1,8 +1,9 @@
-from django.views.generic import DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
+from django.views.generic import DetailView
 
 from ..models.archive import Archive
+
 
 class ArchiveDetailView(LoginRequiredMixin, DetailView):
     model               = Archive

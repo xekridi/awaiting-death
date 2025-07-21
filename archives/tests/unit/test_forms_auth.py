@@ -1,7 +1,8 @@
 import pytest
 from django.contrib.auth import get_user_model
-from accounts.forms import RegistrationForm
 from django.contrib.auth.forms import AuthenticationForm
+
+from accounts.forms import RegistrationForm
 
 User = get_user_model()
 

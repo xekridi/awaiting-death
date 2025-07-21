@@ -1,8 +1,9 @@
 import pytest
 from django.urls import reverse
 from django.utils import timezone
-from archives.models.archive import Archive
+
 from archives.models.click_log import ClickLog
+
 
 @pytest.mark.django_db
 def test_successful_file_download(tmp_path, client_logged_in, settings, archive):

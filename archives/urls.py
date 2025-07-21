@@ -1,11 +1,12 @@
 from django.urls import path
-from .views_user.home import HomePage
-from .views_user.upload import UploadView, WaitView, wait_progress
-from .views_user.download import DownloadPageView, DownloadView
+
 from .views_user.dashboard import DashboardView
 from .views_user.detail import ArchiveDetailView
-from .views_user.stats import StatsPageView, StatsAPIView
-from .views_user.preview  import PreviewView
+from .views_user.download import DownloadPageView, DownloadView
+from .views_user.home import HomePage
+from .views_user.preview import PreviewView
+from .views_user.stats import StatsAPIView, StatsPageView
+from .views_user.upload import UploadView, WaitView, wait_progress
 
 urlpatterns = [
     path("",                          HomePage.as_view(),          name="home"),

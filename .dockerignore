@@ -26,3 +26,6 @@ zips/
 docker-compose.yml
 docker-compose.override.yml
 .deps/
+
+old/
+tests/

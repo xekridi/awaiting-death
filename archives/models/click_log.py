@@ -1,7 +1,8 @@
-from .archive import Archive
-
 from django.db import models
 from django.utils import timezone
+
+from .archive import Archive
+
 
 class ClickLog(models.Model):
     archive     = models.ForeignKey(Archive, on_delete=models.CASCADE, related_name="clicks")

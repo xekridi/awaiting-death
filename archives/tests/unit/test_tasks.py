@@ -1,11 +1,13 @@
-import pytest
 from pathlib import Path
-from django.utils import timezone
+
+import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils import timezone
 
 from archives.models.archive import Archive
 from archives.models.file_item import FileItem
 from archives.tasks import build_zip, cleanup_expired_archives
+
 
 @pytest.mark.django_db
 def test_build_zip_creates_zip_and_marks_ready(tmp_path, settings):

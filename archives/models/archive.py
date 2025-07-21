@@ -6,6 +6,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
+
 def default_expiry():
         return timezone.now() + timezone.timedelta(days=7)
 
@@ -61,4 +62,3 @@ class Archive(models.Model):
 
     def __str__(self):
         return f"{self.short_code} ({self.download_count}/{self.max_downloads or '∞'})"
-    

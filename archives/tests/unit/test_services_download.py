@@ -1,15 +1,17 @@
 import os
+
 import pytest
 from django.core.exceptions import PermissionDenied, SuspiciousOperation
 from django.utils import timezone
 
-from archives.services.download import (
-    get_archive_for_download,
-    mark_download_and_get_path,
-    DownloadError,
-)
 from archives.models.archive import Archive
 from archives.models.click_log import ClickLog
+from archives.services.download import (
+    DownloadError,
+    get_archive_for_download,
+    mark_download_and_get_path,
+)
+
 
 @pytest.mark.django_db
 def test_get_archive_for_download_not_ready(archive):

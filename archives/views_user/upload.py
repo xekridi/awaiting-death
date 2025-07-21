@@ -1,9 +1,10 @@
 import logging
+
+from celery.result import AsyncResult
+from django.contrib.auth.views import redirect_to_login
+from django.http import Http404, JsonResponse
 from django.shortcuts import redirect
 from django.views.generic import FormView, TemplateView
-from django.http import JsonResponse, Http404
-from django.contrib.auth.views import redirect_to_login
-from celery.result import AsyncResult
 
 from ..forms import UploadForm
 from ..models.archive import Archive
